@@ -15,6 +15,7 @@ from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
 
+
 class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -34,8 +35,9 @@ class NiftiDataset(Dataset):
             for img in image_data:
                 start_x = (img.shape[0] - 256) // 2
                 start_y = (img.shape[1] - 256) // 2
-                img_cropped = img[start_x:start_x+256, start_y:start_y+256]  # crop image
-                img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
+                img_cropped = img[start_x:start_x + 256, start_y:start_y + 256]  # crop image
+                img_tensor = torch.from_numpy(img_cropped).unsqueeze(
+                    0)  # convert image to tensor and add channel dimension
                 images.append(img_tensor)
 
             self.slices.extend(images)  # add these images to the list of all slices
@@ -196,7 +198,7 @@ progress_bar.close()
 now = datetime.now()
 
 # Format date and time
-date_time = now.strftime("%Y%m%d_%H%M") # I replaced ":" with "M" to avoid file naming issues
+date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file naming issues
 
 # Use date_time string in file name
 torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
@@ -210,7 +212,7 @@ torch.cuda.empty_cache()
 val_samples = np.linspace(n_epochs, val_interval, int(n_epochs / val_interval))
 fig, ax = plt.subplots(nrows=5, ncols=1, sharey=True, figsize=(10, 20))
 for image_n in range(5):
-    reconstructions = torch.reshape(intermediary_images[image_n]*300, (256 * num_example_images, 256)).T
+    reconstructions = torch.reshape(intermediary_images[image_n] * 300, (256 * num_example_images, 256)).T
     ax[image_n].imshow(reconstructions.cpu(), cmap="jet")
     ax[image_n].set_xticks([])
     ax[image_n].set_yticks([])
