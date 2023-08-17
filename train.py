@@ -16,19 +16,41 @@ from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDis
 from generative.networks.schedulers import DDPMScheduler
 
 
+def save_checkpoint_ldm(epoch, model, optimizer, filename):
+    checkpoint = {
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+    }
+    torch.save(checkpoint, filename)
+
+
+def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, filename):
+    checkpoint = {
+        'epoch': epoch,
+        'autoencoder_state_dict': autoencoder_model.state_dict(),
+        'discriminator_state_dict': discriminator_model.state_dict(),
+        'optimizer_g_state_dict': optimizer_g.state_dict(),
+        'optimizer_d_state_dict': optimizer_d.state_dict(),
+    }
+    torch.save(checkpoint, filename)
+
+
 class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii')]
+        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]  # Change to .nii.gz
         self.slices = []
 
-        # Load all slices from all nii files
+        # Load all slices from all nii.gz files
         for nii_path in self.nii_files:
             img = nib.load(nii_path)
             image_data = img.get_fdata()
             image_data = np.moveaxis(image_data, -1, 0)  # convert from HxWxD to DxHxW
             image_data = image_data.astype(np.float32)  # convert data from int16 to float32 if needed
-            image_data /= 300  # normalize data
+
+            max_value = np.max(image_data)  # get the max value of the image
+            image_data /= max_value  # normalize data
 
             # Crop slices to 256x256
             images = []
@@ -36,20 +58,22 @@ class NiftiDataset(Dataset):
                 start_x = (img.shape[0] - 256) // 2
                 start_y = (img.shape[1] - 256) // 2
                 img_cropped = img[start_x:start_x + 256, start_y:start_y + 256]  # crop image
-                img_tensor = torch.from_numpy(img_cropped).unsqueeze(
-                    0)  # convert image to tensor and add channel dimension
+                img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
                 images.append(img_tensor)
 
             self.slices.extend(images)  # add these images to the list of all slices
 
     def __len__(self):
-        return len(self.slices)  # return the total number of slices
+        return len(self.slices)
 
     def __getitem__(self, idx):
-        return self.slices[idx]  # return a single slice
+        return self.slices[idx]
+
+vae_best_val_loss = float('inf')
+ldm_best_val_loss = float('inf')
 
 
-root_dir = './datasets/raw'
+root_dir = '../../../../lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00'
 dataset = NiftiDataset(root_dir=root_dir)
 
 validation_split = 0.2
@@ -63,8 +87,8 @@ val_indices = indices[training_size:]
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
-train_loader = DataLoader(train_dataset, batch_size=6, shuffle=True, num_workers=4, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=6, shuffle=False, num_workers=4, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=4, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=4, persistent_workers=True)
 
 device = torch.device("cuda")
 
@@ -192,6 +216,17 @@ for epoch in range(n_epochs):
         val_loss /= val_step
         val_recon_losses.append(val_loss)
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
+
+        # Save checkpoint every 10 epochs (or choose another interval)
+        if (epoch + 1) % 10 == 0:
+            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, f'vae_checkpoint_epoch_{epoch}.pth')
+
+        # Save checkpoint if validation loss improves
+        if (epoch + 1) % val_interval == 0:
+            if val_loss < vae_best_val_loss:
+                vae_best_val_loss = val_loss
+                save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, 'vae_best_checkpoint.pth')
+
 progress_bar.close()
 
 # Get current date and time
@@ -204,16 +239,131 @@ date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file
 torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
 torch.save(discriminator.state_dict(), f'discriminator_weights_{date_time}.pth')
 
+plt.figure(figsize=(10, 5))
+plt.plot(epoch_recon_losses, label='Training Reconstruction Loss')
+plt.plot(range(0, n_epochs, val_interval), val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Learning Curves')
+plt.savefig('VAE_learning_curves.png')
+
 del discriminator
 del perceptual_loss
 torch.cuda.empty_cache()
 
-# Plot last 5 evaluations
-val_samples = np.linspace(n_epochs, val_interval, int(n_epochs / val_interval))
-fig, ax = plt.subplots(nrows=5, ncols=1, sharey=True, figsize=(10, 20))
-for image_n in range(5):
-    reconstructions = torch.reshape(intermediary_images[image_n] * 300, (256 * num_example_images, 256)).T
-    ax[image_n].imshow(reconstructions.cpu(), cmap="jet")
-    ax[image_n].set_xticks([])
-    ax[image_n].set_yticks([])
-    ax[image_n].set_ylabel(f"Epoch {val_samples[image_n]:.0f}")
+unet = DiffusionModelUNet(
+    spatial_dims=2,
+    in_channels=3,
+    out_channels=3,
+    num_res_blocks=2,
+    num_channels=(128, 256, 512),
+    attention_levels=(False, True, True),
+    num_head_channels=(0, 256, 512),
+)
+
+scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
+
+with torch.no_grad():
+    with autocast(enabled=True):
+        z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
+
+print(f"Scaling factor set to {1/torch.std(z)}")
+scale_factor = 1 / torch.std(z)
+
+inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+
+optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
+
+unet = unet.to(device)
+n_epochs = 200
+val_interval = 40
+epoch_losses = []
+val_losses = []
+scaler = GradScaler()
+
+for epoch in range(n_epochs):
+    unet.train()
+    autoencoderkl.eval()
+    epoch_loss = 0
+    progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
+    progress_bar.set_description(f"Epoch {epoch}")
+    for step, batch in progress_bar:
+        images = batch.to(device)
+        optimizer.zero_grad(set_to_none=True)
+        with autocast(enabled=True):
+            z_mu, z_sigma = autoencoderkl.encode(images)
+            z = autoencoderkl.sampling(z_mu, z_sigma)
+            noise = torch.randn_like(z).to(device)
+            timesteps = torch.randint(0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device).long()
+            noise_pred = inferer(
+                inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps, autoencoder_model=autoencoderkl
+            )
+            loss = F.mse_loss(noise_pred.float(), noise.float())
+
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
+
+        epoch_loss += loss.item()
+
+        progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
+    epoch_losses.append(epoch_loss / (step + 1))
+
+    if (epoch + 1) % val_interval == 0:
+        unet.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for val_step, batch in enumerate(val_loader, start=1):
+                images = batch.to(device)
+
+                with autocast(enabled=True):
+                    z_mu, z_sigma = autoencoderkl.encode(images)
+                    z = autoencoderkl.sampling(z_mu, z_sigma)
+
+                    noise = torch.randn_like(z).to(device)
+                    timesteps = torch.randint(
+                        0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
+                    ).long()
+                    noise_pred = inferer(
+                        inputs=images,
+                        diffusion_model=unet,
+                        noise=noise,
+                        timesteps=timesteps,
+                        autoencoder_model=autoencoderkl,
+                    )
+
+                    loss = F.mse_loss(noise_pred.float(), noise.float())
+
+                val_loss += loss.item()
+        val_loss /= val_step
+        val_losses.append(val_loss)
+        print(f"Epoch {epoch} val loss: {val_loss:.4f}")
+        # Save checkpoint every 10 epochs (or choose another interval)
+        if (epoch + 1) % 10 == 0:
+            save_checkpoint_ldm(epoch, unet, optimizer, f'checkpoint_epoch_{epoch}.pth')
+
+        # Save checkpoint if validation loss improves
+        if (epoch + 1) % val_interval == 0:
+            if val_loss < ldm_best_val_loss:
+                ldm_best_val_loss = val_loss
+                save_checkpoint_ldm(epoch, unet, optimizer, 'best_checkpoint.pth')
+
+progress_bar.close()
+
+# Plotting the learning curves
+plt.figure()
+plt.title("Learning Curves", fontsize=20)
+plt.plot(np.linspace(1, n_epochs, n_epochs), epoch_losses, linewidth=2.0, label="Train")
+plt.plot(
+    np.linspace(val_interval, n_epochs, int(n_epochs / val_interval)),
+    val_losses,
+    linewidth=2.0,
+    label="Validation"
+)
+plt.yticks(fontsize=12)
+plt.xticks(fontsize=12)
+plt.xlabel("Epochs", fontsize=16)
+plt.ylabel("Loss", fontsize=16)
+plt.legend(prop={"size": 14})
+plt.savefig('LDM_learning_curves.png')
