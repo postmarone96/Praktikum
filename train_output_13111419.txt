@@ -1,3 +1,0 @@
-HELLo
-env activated
-runnning train.py
