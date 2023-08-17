@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: generative
+Version: 0.2.2
+Summary: Installer to help to use the prototypes from MONAI generative models in other projects.
