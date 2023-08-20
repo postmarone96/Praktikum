@@ -6,5 +6,5 @@
 #SBATCH -c 1 
 #SBATCH --time=00:10:00 
 
-
-lscpu
+source activate iterm_sd_pr
+source install -c conda-forge lpips

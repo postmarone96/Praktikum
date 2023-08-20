@@ -8,7 +8,7 @@
 #SBATCH --mem=80G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
-#SBATCH --mail-user=Marouane.Hajri@helmholtz-munich.de
+#SBATCH --mail-user=marouanehajri@hotmail.com
 #SBATCH --qos=gpu_normal
 #SBATCH --mail-type=ALL
 
