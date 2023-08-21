@@ -86,8 +86,8 @@ val_indices = indices[training_size:]
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=4, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=4, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=8, persistent_workers=True)
 
 device = torch.device("cuda")
 
