@@ -37,36 +37,58 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
 print('Class Nifti')
 class NiftiDataset(Dataset):
     def __init__(self, root_dir):
+        print('self.root_dir = root_dir')
         self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]  # Change to .nii.gz
-        self.slices = []
-
-        # Load all slices from all nii.gz files
+        print("self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]")
+        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
+        print('self.total_slices = 0')
+        self.total_slices = 0
+        print('self.slice_indices = []')
+        self.slice_indices = []
+        print('for nii_path in self.nii_files:')
         for nii_path in self.nii_files:
+            print('img = nib.load(nii_path)')
             img = nib.load(nii_path)
+            print('image_data = img.get_fdata()')
             image_data = img.get_fdata()
-            image_data = np.moveaxis(image_data, -1, 0)  # convert from HxWxD to DxHxW
-            image_data = image_data.astype(np.float32)  # convert data from int16 to float32 if needed
-
-            max_value = np.max(image_data)  # get the max value of the image
-            image_data /= max_value  # normalize data
-
-            # Crop slices to 256x256
-            images = []
-            for img in image_data:
-                start_x = (img.shape[0] - 256) // 2
-                start_y = (img.shape[1] - 256) // 2
-                img_cropped = img[start_x:start_x + 256, start_y:start_y + 256]  # crop image
-                img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
-                images.append(img_tensor)
-
-            self.slices.extend(images)  # add these images to the list of all slices
+            print('image_data = np.moveaxis(image_data, -1, 0)')
+            image_data = np.moveaxis(image_data, -1, 0)
+            print('self.total_slices += image_data.shape[0]')
+            self.total_slices += image_data.shape[0]
+            print('self.slice_indices.extend([(nii_path, i) for i in range(image_data.shape[0])])')
+            self.slice_indices.extend([(nii_path, i) for i in range(image_data.shape[0])])
 
     def __len__(self):
-        return len(self.slices)
+        print('return self.total_slices')
+        return self.total_slices
 
     def __getitem__(self, idx):
-        return self.slices[idx]
+        print('nii_path, slice_idx = self.slice_indices[idx]')
+        nii_path, slice_idx = self.slice_indices[idx]
+        print('img = nib.load(nii_path)')
+        img = nib.load(nii_path)
+        print('image_data = img.get_fdata()')
+        image_data = img.get_fdata()
+        print('image_data = np.moveaxis(image_data, -1, 0)')
+        image_data = np.moveaxis(image_data, -1, 0)
+        print('image_data = image_data.astype(np.float32)')
+        image_data = image_data.astype(np.float32)
+        print('max_value = np.max(image_data)')
+        max_value = np.max(image_data)
+        print('image_data /= max_value')
+        image_data /= max_value
+        print('img_slice = image_data[slice_idx]')
+        img_slice = image_data[slice_idx]
+        print('start_x = (img_slice.shape[0] - 256) // 2')
+        start_x = (img_slice.shape[0] - 256) // 2
+        print('start_y = (img_slice.shape[1] - 256) // 2')
+        start_y = (img_slice.shape[1] - 256) // 2
+        print('img_cropped = img_slice[start_x:start_x + 256, start_y:start_y + 256]')
+        img_cropped = img_slice[start_x:start_x + 256, start_y:start_y + 256]
+        print('img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)')
+        img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)
+        print('return img_tensor')
+        return img_tensor
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
