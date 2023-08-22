@@ -1,0 +1,6 @@
+Hello world!
+env activated
+runnning train.py
+Hi
+Class Nifti
+get the data

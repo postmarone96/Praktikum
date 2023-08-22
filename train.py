@@ -14,7 +14,7 @@ from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
 
-
+print('Hi')
 def save_checkpoint_ldm(epoch, model, optimizer, filename):
     checkpoint = {
         'epoch': epoch,
@@ -34,7 +34,7 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
     }
     torch.save(checkpoint, filename)
 
-
+print('Class Nifti')
 class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -71,7 +71,7 @@ class NiftiDataset(Dataset):
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
-
+print('get the data')
 root_dir = '../../../../lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00'
 dataset = NiftiDataset(root_dir=root_dir)
 
@@ -85,9 +85,9 @@ val_indices = indices[training_size:]
 
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
-
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=8, persistent_workers=True)
+print('dataloader')
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=0, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=4, shuffle=False, num_workers=0, persistent_workers=True)
 
 device = torch.device("cuda")
 
@@ -133,6 +133,7 @@ val_recon_losses = []
 intermediary_images = []
 num_example_images = 4
 
+print('vae training')
 for epoch in range(n_epochs):
     autoencoderkl.train()
     discriminator.train()
