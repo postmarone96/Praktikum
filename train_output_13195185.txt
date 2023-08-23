@@ -1,0 +1,8 @@
+Define the scratch directory
+Create the directory
+Copy data to scratch
+change directory
+env activated
+C00
+train.py
+Clean up

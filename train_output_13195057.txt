@@ -1,0 +1,11 @@
+Define the scratch directory
+Create the directory
+Copy data to scratch
+change directory
+env activated
+runnning train.py
+2023-08-23 23:06:58.224833 - Starting the script
+2023-08-23 23:06:58.225856 - Defining NiftiDataset class
+2023-08-23 23:06:58.225899 - Loading data
+2023-08-23 23:06:58.250032 - Splitting data for training and validation
+Clean up

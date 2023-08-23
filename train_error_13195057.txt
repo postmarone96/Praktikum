@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "train.py", line 97, in <module>
+    train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
+  File "/home/viro/marouane.hajri/miniconda3/envs/myenv/lib/python3.8/site-packages/torch/utils/data/dataloader.py", line 351, in __init__
+    sampler = RandomSampler(dataset, generator=generator)  # type: ignore[arg-type]
+  File "/home/viro/marouane.hajri/miniconda3/envs/myenv/lib/python3.8/site-packages/torch/utils/data/sampler.py", line 107, in __init__
+    raise ValueError("num_samples should be a positive integer "
+ValueError: num_samples should be a positive integer value, but got num_samples=0

@@ -43,7 +43,6 @@ class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
         self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
-        print(len(self.nii_files))
         self.total_slices = 0
         self.slice_indices = []
         
@@ -95,8 +94,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=8, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=32, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
