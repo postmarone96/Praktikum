@@ -14,7 +14,11 @@ from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
 
-print('Hi')
+def print_with_timestamp(message):
+    current_time = datetime.datetime.now()
+    print(f"{current_time} - {message}")
+print_with_timestamp("Starting the script")
+
 def save_checkpoint_ldm(epoch, model, optimizer, filename):
     checkpoint = {
         'epoch': epoch,
@@ -22,7 +26,6 @@ def save_checkpoint_ldm(epoch, model, optimizer, filename):
         'optimizer_state_dict': optimizer.state_dict(),
     }
     torch.save(checkpoint, filename)
-
 
 def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, filename):
     checkpoint = {
@@ -34,7 +37,7 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
     }
     torch.save(checkpoint, filename)
 
-print('Class Nifti')
+print_with_timestamp("Defining NiftiDataset class")
 class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -70,8 +73,8 @@ class NiftiDataset(Dataset):
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
-print('get the data')
-root_dir = '../../../../lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00'
+print_with_timestamp("Loading data")
+root_dir = '../../../../localscratch/marouane.hajri/dataset'
 dataset = NiftiDataset(root_dir=root_dir)
 
 validation_split = 0.2
@@ -84,12 +87,15 @@ val_indices = indices[training_size:]
 
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
-print('dataloader')
+
+print_with_timestamp("Splitting data for training and validation")
 train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
 val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=8, persistent_workers=True)
 
+print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
+print_with_timestamp("AutoEncoder setup")
 autoencoderkl = AutoencoderKL(
     spatial_dims=2,
     in_channels=1,
@@ -132,7 +138,7 @@ val_recon_losses = []
 intermediary_images = []
 num_example_images = 4
 
-print('vae training')
+print_with_timestamp("Start setting")
 for epoch in range(n_epochs):
     autoencoderkl.train()
     discriminator.train()
