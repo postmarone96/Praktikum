@@ -15,7 +15,7 @@ from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDis
 from generative.networks.schedulers import DDPMScheduler
 
 def print_with_timestamp(message):
-    current_time = datetime.datetime.now()
+    current_time = datetime.now()
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
@@ -74,7 +74,7 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-root_dir = '../../../../localscratch/marouane.hajri/dataset'
+root_dir = '/localscratch/marouane.hajri/dataset'
 dataset = NiftiDataset(root_dir=root_dir)
 
 validation_split = 0.2
