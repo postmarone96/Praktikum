@@ -43,6 +43,7 @@ class NiftiDataset(Dataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
         self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
+        print(len(self.nii_files))
         self.total_slices = 0
         self.slice_indices = []
         
