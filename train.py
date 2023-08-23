@@ -1,4 +1,5 @@
 import os
+import argparse
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -74,8 +75,12 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-root_dir = '/localscratch/marouane.hajri/dataset'
-dataset = NiftiDataset(root_dir=root_dir)
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, required=True)
+args = parser.parse_args()
+
+data_path = args.data_path
+dataset = NiftiDataset(root_dir=data_path)
 
 validation_split = 0.2
 dataset_size = len(dataset)
