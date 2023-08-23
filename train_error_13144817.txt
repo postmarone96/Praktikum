@@ -1,8 +1,0 @@
-WARNING[XFORMERS]: xFormers can't load C++/CUDA extensions. xFormers was built for:
-    PyTorch 1.13.1+cu117 with CUDA 1107 (you have 2.0.1+cu117)
-    Python  3.8.16 (you have 3.8.17)
-  Please reinstall xformers (see https://github.com/facebookresearch/xformers#installing-xformers)
-  Memory-efficient attention, SwiGLU, sparse and more won't be available.
-  Set XFORMERS_MORE_DETAILS=1 for more details
-/var/spool/slurmd/job13144817/slurm_script: line 25: 1287926 Killed                  python -u train.py
-slurmstepd: error: Detected 1 oom-kill event(s) in StepId=13144817.batch. Some of your processes may have been killed by the cgroup out-of-memory handler.

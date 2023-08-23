@@ -1,4 +1,0 @@
-Hello world!
-env activated
-runnning train.py
-Hi

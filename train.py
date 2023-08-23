@@ -52,7 +52,7 @@ class NiftiDataset(Dataset):
     def __len__(self):
         return self.total_slices
 
-    def __getitem__(self, idx)
+    def __getitem__(self, idx):
         nii_path, slice_idx = self.slice_indices[idx]
         img = nib.load(nii_path)
         image_data = img.get_fdata()
@@ -85,8 +85,8 @@ val_indices = indices[training_size:]
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 print('dataloader')
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=0, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=4, shuffle=False, num_workers=0, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=8, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=8, persistent_workers=True)
 
 device = torch.device("cuda")
 
