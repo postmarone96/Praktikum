@@ -18,8 +18,8 @@ echo "Hello world!"
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
-
-
 echo "runnning train.py"
 
-python -u train.py
+SCRATCH_DIR=/localscratch/marouane.hajri/dataset
+python -u train.py --data_path $SCRATCH_DIR
+
