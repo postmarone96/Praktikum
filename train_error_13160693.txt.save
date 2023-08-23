@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "train.py", line 75, in <module>
-    dataset = NiftiDataset(root_dir=root_dir)
-NameError: name 'root_dir' is not defined
