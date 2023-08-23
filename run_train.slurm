@@ -13,13 +13,19 @@
 #SBATCH --qos=gpu_normal
 #SBATCH --mail-type=ALL
 
+# Define the scratch directory
+SCRATCH_DIR=/tmp/$USER/job_$SLURM_JOB_ID
 
-echo "Hello world!"
+# Create the directory
+mkdir -p $SCRATCH_DIR
+
+# Copy data to scratch
+cp -r /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00 $SCRATCH_DIR/
+
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
-echo "runnning train.py"
 
-SCRATCH_DIR=/localscratch/marouane.hajri/dataset
+echo "runnning train.py"
 python -u train.py --data_path $SCRATCH_DIR
 
