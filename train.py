@@ -57,11 +57,10 @@ class NiftiDataset(Dataset):
 
             # Crop slices to 256x256
             images = []
-            example_slice = self.image_data_list[0][0]
-            self.start_x = (example_slice.shape[0] - 256) // 2
-            self.start_y = (example_slice.shape[1] - 256) // 2
             for img in image_data:
-                img_cropped = img[self.start_x:self.start_x + 256, self.start_y:self.start_y + 256]  # crop image
+                start_x = (img.shape[0] - 256) // 2
+                start_y = (img.shape[1] - 256) // 2
+                img_cropped = img[start_x:start_x + 256, start_y:start_y + 256]  # crop image
                 img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
                 images.append(img_tensor)
 
