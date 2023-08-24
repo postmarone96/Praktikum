@@ -4,6 +4,7 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+import monai
 import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
@@ -14,6 +15,18 @@ from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
+from monai.transforms import Compose, LoadNifti, AddChannel, ScaleIntensity, SpatialCrop, ToTensor
+from monai.data import CacheDataset, SmartCacheDataset
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, required=True)
+parser.add_argument("--base_dataset", type=str, required=True)
+parser.add_argument("--batch_size", type=int, default=32)
+parser.add_argument("--num_workers", type=int, default=16)
+parser.add_argument("--lr_optim_g", type=float, default=1e-4)
+parser.add_argument("--lr_optim_d", type=float, default=5e-4)
+args = parser.parse_args()
 
 def print_with_timestamp(message):
     current_time = datetime.now()
@@ -39,53 +52,40 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
     torch.save(checkpoint, filename)
 
 print_with_timestamp("Defining NiftiDataset class")
-class NiftiDataset(Dataset):
-    def __init__(self, root_dir):
+BaseDataset = CacheDataset if args.base_dataset == 'cache' else SmartCacheDataset
+class NiftiDataset(BaseDataset):
+    def __init__(self, root_dir, transform=None):
+        data = []
         self.root_dir = root_dir
         self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
-        self.total_slices = 0
-        self.slice_indices = []
         
         for nii_path in self.nii_files:
-            img = nib.load(nii_path)
-            image_data = img.get_fdata()
-            image_data = np.moveaxis(image_data, -1, 0)
-            self.total_slices += image_data.shape[0]
-            self.slice_indices.extend([(nii_path, i) for i in range(image_data.shape[0])])
+            for slice_idx in range(monai.io.NibabelReader().get_shape(nii_path)[-1]):
+                data.append({'nii_path': nii_path, 'slice_idx': slice_idx})
 
-    def __len__(self):
-        return self.total_slices
+        super().__init__(data, transform, cache_rate=1.0)
 
     def __getitem__(self, idx):
-        nii_path, slice_idx = self.slice_indices[idx]
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        image_data = np.moveaxis(image_data, -1, 0)
-        image_data = image_data.astype(np.float32)
-        max_value = np.max(image_data)
-        image_data /= max_value
-        img_slice = image_data[slice_idx]
-        start_x = (img_slice.shape[0] - 256) // 2
-        start_y = (img_slice.shape[1] - 256) // 2
-        img_cropped = img_slice[start_x:start_x + 256, start_y:start_y + 256]
-        img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)
-        return img_tensor
+        data = super().__getitem__(idx)
+        return data["img_cropped"]
+
+# Define your transformations
+transforms = Compose([
+    LoadNifti(image_only=True),
+    AddChannel(),
+    ScaleIntensity(),
+    lambda x: x[..., data["slice_idx"]],
+    SpatialCrop(roi_start=(0, 22, 22), roi_end=(1, 278, 278)),
+    ToTensor()
+])
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, required=True)
-parser.add_argument("--batch_size", type=int, default=32)
-parser.add_argument("--num_workers", type=int, default=16)
-parser.add_argument("--lr_optim_g", type=float, default=1e-4)
-parser.add_argument("--lr_optim_d", type=float, default=5e-4)
-args = parser.parse_args()
-
-
 data_path = args.data_path
-dataset = NiftiDataset(root_dir=data_path)
+# Initialize your dataset
+dataset = NiftiDataset(root_dir=data_path, transform=transforms)
 
 validation_split = 0.2
 dataset_size = len(dataset)
