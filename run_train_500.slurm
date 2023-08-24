@@ -2,8 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=train_output_%j.txt
-#SBATCH --error=train_error_%j.txt
+#SBATCH --output=train_500_output_%j.txt
+#SBATCH --error=train_500_error_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:1
 #SBATCH --mem=150G
@@ -20,7 +20,7 @@ echo "Create the directory"
 mkdir -p $SCRATCH_DIR
 
 echo "Copy data to scratch"
-cp -r /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ $SCRATCH_DIR/
+find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n 500 | xargs -I {} cp {} $SCRATCH_DIR/
 cp $HOME/Praktikum/train.py $SCRATCH_DIR/
 
 echo "change directory"
@@ -31,7 +31,7 @@ conda activate myenv
 echo "env activated"
 
 echo "runnning train.py"
-python -u train.py --data_path $SCRATCH_DIR/C00 --batch_size 64
+python -u train.py --data_path $SCRATCH_DIR --batch_size 64 --base_dataset cache
  
 echo "Clean up"
 rm -rf $SCRATCH_DIR
