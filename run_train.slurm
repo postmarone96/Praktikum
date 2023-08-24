@@ -31,7 +31,7 @@ conda activate myenv
 echo "env activated"
 
 echo "runnning train.py"
-python -u train.py --data_path $SCRATCH_DIR/C00
+python -u train.py --data_path $SCRATCH_DIR/C00 --batch_size 64
  
 echo "Clean up"
 rm -rf $SCRATCH_DIR
