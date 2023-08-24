@@ -99,8 +99,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=arg.batch_size, shuffle=True, num_workers=arg.num_workers, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=arg.batch_size, shuffle=False, num_workers=arg.num_workers, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -129,8 +129,8 @@ discriminator = discriminator.to(device)
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 
-optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=arg.lr_optim_g)
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=arg.lr_optim_d)
+optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
 
 # For mixed precision training
 scaler_g = torch.cuda.amp.GradScaler()
