@@ -55,6 +55,7 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
 
 print_with_timestamp("Defining NiftiDataset class")
 BaseDataset = CacheDataset if args.base_dataset == 'cache' else SmartCacheDataset
+
 class NiftiDataset(BaseDataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
@@ -71,12 +72,12 @@ class NiftiDataset(BaseDataset):
             # Crop slices to 256x256
             images = []
             for img in image_data:
-		max_value = np.max(img)
-		img /= max_value
+                max_value = np.max(img)
+                img /= max_value
                 img_cropped = img[0:256, 0:256]  # crop image
                 img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
                 images.append(img_tensor)
-
+            
             self.slices.extend(images)  # add these images to the list of all slic  
     
         super().__init__(data=self.slices, transform=None, cache_rate=1.0)
