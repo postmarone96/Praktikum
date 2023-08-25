@@ -15,10 +15,12 @@ from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
-from monai.transforms import Compose, LoadNifti, AddChannel, ScaleIntensity, SpatialCrop, ToTensor
 from monai.data import CacheDataset, SmartCacheDataset
 
+# clear CUDA
+torch.cuda.empty_cache()
 
+# parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
 parser.add_argument("--base_dataset", type=str, required=True)
@@ -56,7 +58,7 @@ BaseDataset = CacheDataset if args.base_dataset == 'cache' else SmartCacheDatase
 class NiftiDataset(BaseDataset):
     def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii')]  # Change to .nii.gz
+        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]  # Change to .nii.gz
         self.slices = []
 
         # Load ales slices from all nii.gz files
@@ -64,14 +66,13 @@ class NiftiDataset(BaseDataset):
             img = nib.load(nii_path)
             image_data = img.get_fdata()
             image_data = np.moveaxis(image_data, -1, 0)  # convert from HxWxD to DxHxW
-            image_data = image_data.astype(np.float16)  # convert data from int16 to float32 if needed
-
-            max_value = np.max(image_data)  # get the max value of the image
-            image_data /= max_value  # normalize data
+            image_data = image_data.astype(np.float32)  # convert data from int16 to float32 if needed
 
             # Crop slices to 256x256
             images = []
             for img in image_data:
+		max_value = np.max(img)
+		img /= max_value
                 img_cropped = img[0:256, 0:256]  # crop image
                 img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
                 images.append(img_tensor)
