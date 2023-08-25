@@ -54,30 +54,37 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
 print_with_timestamp("Defining NiftiDataset class")
 BaseDataset = CacheDataset if args.base_dataset == 'cache' else SmartCacheDataset
 class NiftiDataset(BaseDataset):
-    def __init__(self, root_dir, transform=None):
-        data = []
+    def __init__(self, root_dir):
         self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
-        
-        for nii_path in self.nii_files:
-            for slice_idx in range(monai.io.NibabelReader().get_shape(nii_path)[-1]):
-                data.append({'nii_path': nii_path, 'slice_idx': slice_idx})
+        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii')]  # Change to .nii.gz
+        self.slices = []
 
-        super().__init__(data, transform, cache_rate=1.0)
+        # Load ales slices from all nii.gz files
+        for nii_path in self.nii_files:
+            img = nib.load(nii_path)
+            image_data = img.get_fdata()
+            image_data = np.moveaxis(image_data, -1, 0)  # convert from HxWxD to DxHxW
+            image_data = image_data.astype(np.float16)  # convert data from int16 to float32 if needed
+
+            max_value = np.max(image_data)  # get the max value of the image
+            image_data /= max_value  # normalize data
+
+            # Crop slices to 256x256
+            images = []
+            for img in image_data:
+                img_cropped = img[0:256, 0:256]  # crop image
+                img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
+                images.append(img_tensor)
+
+            self.slices.extend(images)  # add these images to the list of all slic  
+    
+        super().__init__(data=self.slices, transform=None, cache_rate=1.0)
+    
+    def __len__(self):
+        return len(self.slices)
 
     def __getitem__(self, idx):
-        data = super().__getitem__(idx)
-        return data["img_cropped"]
-
-# Define your transformations
-transforms = Compose([
-    LoadNifti(image_only=True),
-    AddChannel(),
-    ScaleIntensity(),
-    lambda x: x[..., data["slice_idx"]],
-    SpatialCrop(roi_start=(0, 22, 22), roi_end=(1, 278, 278)),
-    ToTensor()
-])
+        return self.slices[idx]
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
@@ -85,7 +92,7 @@ ldm_best_val_loss = float('inf')
 print_with_timestamp("Loading data")
 data_path = args.data_path
 # Initialize your dataset
-dataset = NiftiDataset(root_dir=data_path, transform=transforms)
+dataset = NiftiDataset(root_dir=data_path)
 
 validation_split = 0.2
 dataset_size = len(dataset)
