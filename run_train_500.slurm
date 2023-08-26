@@ -32,6 +32,12 @@ echo "env activated"
 
 echo "runnning train.py"
 python -u train.py --data_path $SCRATCH_DIR --batch_size 10 --base_dataset cache
+
+echo "Moving files (excluding .py and .nii.gz) to the job submission directory"
+TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+mkdir -p $TARGET_DIR
+find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xargs -0 mv -t $TARGET_DIR
+
  
 echo "Clean up"
 rm -rf $SCRATCH_DIR
