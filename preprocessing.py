@@ -12,7 +12,7 @@ args = parser.parse_args()
 class NiftiPreprocessor:
     def __init__(self, root_dir, output_file):
         self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii')]
+        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
         self.output_file = output_file
 
     def process_and_save(self):
