@@ -5,6 +5,13 @@ import h5py
 import argparse
 import psutil
 
+# parser
+parser = argparse.ArgumentParser()
+parser.add_argument("--data_path", type=str, required=True)
+parser.add_argument("--output_file", type=str, required=True)
+args = parser.parse_args()
+
+
 class NiftiPreprocessor:
     def __init__(self, root_dir, output_file):
         self.root_dir = root_dir
