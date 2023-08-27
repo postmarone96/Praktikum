@@ -265,6 +265,7 @@ unet = DiffusionModelUNet(
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
 
+check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
