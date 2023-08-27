@@ -21,7 +21,6 @@ torch.cuda.empty_cache()
 
 # parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, required=True)
 parser.add_argument("--output_file", type=str, required=True)
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--num_workers", type=int, default=16)
