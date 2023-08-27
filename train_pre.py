@@ -67,7 +67,7 @@ class NiftiHDF5Dataset(Dataset):
         return image_data
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset('args.output_file')
+dataset = NiftiHDF5Dataset(args.output_file)
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
