@@ -43,7 +43,7 @@ echo "env activated"
 
 echo "run preprocessing"
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
-python -u preprocessing.py --datapath $SCRATCH_DIR --output_file $OUTPUTFILE
+python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
 
 echo "get size of preprocessed dataset"
 du -h $OUTPUTFILE
