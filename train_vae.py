@@ -1,5 +1,6 @@
 import os
 import argparse
+import h5py
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +16,6 @@ from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
-from monai.data import CacheDataset, SmartCacheDataset
 
 # clear CUDA
 torch.cuda.empty_cache()
@@ -24,6 +24,7 @@ torch.cuda.empty_cache()
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
 parser.add_argument("--base_dataset", type=str, required=True)
+parser.add_argument("--checkpoint_dir", type=str, default='')
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--num_workers", type=int, default=16)
 parser.add_argument("--lr_optim_g", type=float, default=1e-4)
@@ -35,58 +36,35 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_ldm(epoch, model, optimizer, filename):
-    checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-    }
-    torch.save(checkpoint, filename)
-
-def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, filename):
+def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, filename):
     checkpoint = {
         'epoch': epoch,
         'autoencoder_state_dict': autoencoder_model.state_dict(),
         'discriminator_state_dict': discriminator_model.state_dict(),
         'optimizer_g_state_dict': optimizer_g.state_dict(),
         'optimizer_d_state_dict': optimizer_d.state_dict(),
+        'val_recon_losses': val_recon_losses,
+        'epoch_recon_losses': epoch_recon_losses,
+        'epoch_gen_losses': epoch_gen_losses,
+        'epoch_disc_losses': epoch_disc_losses,
+        'intermediary_images': intermediary_images
     }
     torch.save(checkpoint, filename)
 
 print_with_timestamp("Defining NiftiDataset class")
-BaseDataset = CacheDataset if args.base_dataset == 'cache' else SmartCacheDataset
+class NiftiHDF5Dataset(Dataset):
+    def __init__(self, hdf5_file):
+        self.hdf5_file = hdf5_file
 
-class NiftiDataset(BaseDataset):
-    def __init__(self, root_dir):
-        self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]  # Change to .nii.gz
-        self.slices = []
-
-        # Load ales slices from all nii.gz files
-        for nii_path in self.nii_files:
-            img = nib.load(nii_path)
-            image_data = img.get_fdata()
-            image_data = np.moveaxis(image_data, -1, 0)  # convert from HxWxD to DxHxW
-            image_data = image_data.astype(np.float32)  # convert data from int16 to float32 if needed
-
-            # Crop slices to 256x256
-            images = []
-            for img in image_data:
-                max_value = np.max(img)
-                img /= max_value
-                img_cropped = img[0:256, 0:256]  # crop image
-                img_tensor = torch.from_numpy(img_cropped).unsqueeze(0)  # convert image to tensor and add channel dimension
-                images.append(img_tensor)
-            
-            self.slices.extend(images)  # add these images to the list of all slic  
-    
-        super().__init__(data=self.slices, transform=None, cache_rate=1.0)
-    
     def __len__(self):
-        return len(self.slices)
+        with h5py.File(self.hdf5_file, 'r') as f:
+            return len(f['all_slices'])
 
     def __getitem__(self, idx):
-        return self.slices[idx]
+        with h5py.File(self.hdf5_file, 'r') as f:
+            image_data = f['all_slices'][idx]
+            image_data = torch.tensor(image_data).unsqueeze(0)  # Adding a channel dimension
+        return image_data
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
@@ -94,7 +72,7 @@ ldm_best_val_loss = float('inf')
 print_with_timestamp("Loading data")
 data_path = args.data_path
 # Initialize your dataset
-dataset = NiftiDataset(root_dir=data_path)
+dataset = NiftiHDF5Dataset(root_dir=data_path)
 
 validation_split = 0.2
 dataset_size = len(dataset)
@@ -115,47 +93,49 @@ print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
 print_with_timestamp("AutoEncoder setup")
-autoencoderkl = AutoencoderKL(
-    spatial_dims=2,
-    in_channels=1,
-    out_channels=1,
-    num_channels=(128, 128, 256),
-    latent_channels=3,
-    num_res_blocks=2,
-    attention_levels=(False, False, False),
-    with_encoder_nonlocal_attn=False,
-    with_decoder_nonlocal_attn=False,
-)
-autoencoderkl = autoencoderkl.to(device)
 
-perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
-perceptual_loss.to(device)
-perceptual_weight = 0.001
+# Before the training loop:
+start_epoch = 0
+checkpoint_path = f'{args.checkpoint_dir}/vae_best_checkpoint.pth'
 
-discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
-discriminator = discriminator.to(device)
+if os.path.exists(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    start_epoch = checkpoint['epoch'] + 1  # because we start the next epoch
+    autoencoderkl.load_state_dict(checkpoint['autoencoder_state_dict'])
+    discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+    optimizer_g.load_state_dict(checkpoint['optimizer_g_state_dict'])
+    optimizer_d.load_state_dict(checkpoint['optimizer_d_state_dict'])
+    val_recon_losses = checkpoint['val_recon_losses']
+    epoch_recon_losses = checkpoint['epoch_recon_losses']
+    epoch_gen_losses = checkpoint['epoch_gen_losses']
+    epoch_disc_losses = checkpoint['epoch_disc_losses']
+    intermediary_images = checkpoint['intermediary_images']
+    print_with_timestamp(f"Resuming from epoch {start_epoch}...")
+else:
+    val_recon_losses = []
+    epoch_recon_losses = []
+    epoch_gen_losses = []
+    epoch_disc_losses = []
+    intermediary_images = []
+    optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
+    autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+    discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
-
-optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
-
-# For mixed precision training
+perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
+perceptual_weight = 0.001
 scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
-
 kl_weight = 1e-6
 n_epochs = 100
 val_interval = 10
 autoencoder_warm_up_n_epochs = 10
 
-epoch_recon_losses = []
-epoch_gen_losses = []
-epoch_disc_losses = []
-val_recon_losses = []
-intermediary_images = []
-num_example_images = 4
+autoencoderkl = autoencoderkl.to(device)
+discriminator = discriminator.to(device)
+perceptual_loss= perceptual_loss.to(device)
 
 print_with_timestamp("Start setting")
 for epoch in range(n_epochs):
@@ -243,13 +223,13 @@ for epoch in range(n_epochs):
 
         # Save checkpoint every 10 epochs (or choose another interval)
         if (epoch + 1) % 10 == 0:
-            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, f'vae_checkpoint_epoch_{epoch}.pth')
+            save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
 
         # Save checkpoint if validation loss improves
         if (epoch + 1) % val_interval == 0:
             if val_loss < vae_best_val_loss:
                 vae_best_val_loss = val_loss
-                save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, 'vae_best_checkpoint.pth')
+                save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
 
 progress_bar.close()
 
