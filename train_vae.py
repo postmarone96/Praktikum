@@ -23,7 +23,6 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
-parser.add_argument("--base_dataset", type=str, required=True)
 parser.add_argument("--checkpoint_dir", type=str, default='')
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--num_workers", type=int, default=16)
