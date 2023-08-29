@@ -2,8 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=train_output_%j.txt
-#SBATCH --error=train_error_%j.txt
+#SBATCH --output=train_pre/train_output_%j.txt
+#SBATCH --error=train_pre/train_error_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:1
 #SBATCH --mem=150G
@@ -20,8 +20,8 @@ echo "Create the directory"
 mkdir -p $SCRATCH_DIR
 
 echo "Copy data to scratch"
-cp -r /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/* $SCRATCH_DIR/
-cp $HOME/Praktikum/train.py $SCRATCH_DIR/
+cp $SLURM_SUBMIT_DIR/train_pre/job_13214025 $SCRATCH_DIR/
+cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
 
 echo "change directory"
 cd $SCRATCH_DIR
@@ -31,10 +31,10 @@ conda activate myenv
 echo "env activated"
 
 echo "runnning train.py"
-python -u train.py --data_path $SCRATCH_DIR --batch_size 10 --base_dataset cache
+python -u train_vae.py --output_file $SCRATCH_DIR/dataset.hdf5
 
 echo "Moving files (excluding .py and .nii.gz) to the job submission directory"
-TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+TARGET_DIR=$SLURM_SUBMIT_DIR/train_pre/job_$SLURM_JOB_ID
 mkdir -p $TARGET_DIR
 find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xargs -0 mv -t $TARGET_DIR
  
