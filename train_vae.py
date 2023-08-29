@@ -23,7 +23,6 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
-parser.add_argument("--checkpoint_dir", type=str, default='')
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--num_workers", type=int, default=16)
 parser.add_argument("--lr_optim_g", type=float, default=1e-4)
@@ -69,9 +68,7 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-data_path = args.data_path
-# Initialize your dataset
-dataset = NiftiHDF5Dataset(root_dir=data_path)
+dataset = NiftiHDF5Dataset(hdf5_file=args.data_path)
 
 validation_split = 0.2
 dataset_size = len(dataset)
@@ -95,7 +92,7 @@ print_with_timestamp("AutoEncoder setup")
 
 # Before the training loop:
 start_epoch = 0
-checkpoint_path = f'{args.checkpoint_dir}/vae_best_checkpoint.pth'
+checkpoint_path = 'vae_best_checkpoint.pth'
 
 if os.path.exists(checkpoint_path):
     checkpoint = torch.load(checkpoint_path)
