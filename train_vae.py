@@ -116,10 +116,10 @@ else:
     epoch_gen_losses = []
     epoch_disc_losses = []
     intermediary_images = []
-    optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
-    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
     autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
     discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
+    optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
 
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
