@@ -22,7 +22,7 @@ torch.cuda.empty_cache()
 
 # parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, required=True)
+parser.add_argument("--output_file", type=str, required=True)
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--num_workers", type=int, default=16)
 parser.add_argument("--lr_optim_g", type=float, default=1e-4)
@@ -68,7 +68,7 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(hdf5_file=args.data_path)
+dataset = NiftiHDF5Dataset(hdf5_file=args.output_file)
 
 validation_split = 0.2
 dataset_size = len(dataset)
