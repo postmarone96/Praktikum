@@ -7,4 +7,4 @@ ARG2=${2:-""}
 export ARG1
 export ARG2
 # Submit the SLURM job
-sbatch train.slurm
+sbatch run_train_${ARG2}.slurm
