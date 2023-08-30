@@ -51,8 +51,8 @@ class NiftiPreprocessor:
                     buffer.append(img_cropped)
                     slice_count += 1
 
-                    # If buffer size reaches 1000, save and clear
-                    if len(buffer) == 1000:
+                    # If buffer size reaches 10000, save and clear
+                    if len(buffer) == 10000:
                         self.save_buffer_to_dataset(dset, buffer)
                         buffer.clear()
                         
