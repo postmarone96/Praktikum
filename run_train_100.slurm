@@ -58,4 +58,3 @@ find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xar
  
 echo "Clean up"
 rm -rf $SCRATCH_DIR
-
