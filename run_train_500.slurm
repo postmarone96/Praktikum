@@ -30,6 +30,13 @@ find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_
 cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
 cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
 
+if [ -z "$ARG1" ]; then
+    echo "ARG1 is not set or is empty. Cannot proceed."
+else
+    cp $HOME/Praktikum/train_500/job_$ARG1/vae_best_checkpoint.pth $SCRATCH_DIR/
+    echo "checkpoint copied successfully."
+fi
+
 echo "change directory"
 cd $SCRATCH_DIR
 
@@ -41,9 +48,6 @@ echo "run preprocessing"
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
 
-echo "get size of preprocessed dataset"
-du -h $OUTPUTFILE
-
 echo "runnning train.py"
 python -u train_vae.py --output_file $OUTPUTFILE
 
@@ -54,4 +58,3 @@ find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xar
  
 echo "Clean up"
 rm -rf $SCRATCH_DIR
-
