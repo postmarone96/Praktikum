@@ -23,7 +23,7 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--batch_size", type=int, default=32)
+parser.add_argument("--batch_size", type=int, default=12)
 parser.add_argument("--num_workers", type=int, default=16)
 parser.add_argument("--lr_optim_g", type=float, default=1e-4)
 parser.add_argument("--lr_optim_d", type=float, default=5e-4)
