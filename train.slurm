@@ -45,7 +45,7 @@ if [ ! -e "$DATASET" ]; then
     echo "preprocessing completed"
 
 elif  [ -e "$DATASET" ]; then
-    cp $HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5 $SCRATCH_DIR/
+    cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
 
