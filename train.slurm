@@ -49,7 +49,7 @@ OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
 
 echo "runnning train.py"
-python -u train_vae.py --output_file $OUTPUTFILE
+python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
 
 echo "Moving files (excluding .py and .nii.gz) to the job submission directory"
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
