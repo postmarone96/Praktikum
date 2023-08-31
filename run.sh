@@ -10,7 +10,7 @@ export ARG2
  
 test -d train_${ARG2} || mkdir train_${ARG2}
 
-test -f train_${ARG2}/train.slurm || cp -n train.slurm train_${ARG2}/
+cp -f train.slurm train_${ARG2}/
 
 cd train_${ARG2}
 
