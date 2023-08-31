@@ -9,9 +9,9 @@
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
-#SBATCH --mail-user=Marouane.Hajri@helmholtz-munich.de
+##SBATCH --mail-user=Marouane.Hajri@helmholtz-munich.de
 #SBATCH --qos=gpu_normal
-#SBATCH --mail-type=ALL
+##SBATCH --mail-type=ALL
 
 echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
