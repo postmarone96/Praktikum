@@ -2,14 +2,14 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=train_$ARG2/train_$ARG2_output_%j.txt
-#SBATCH --error=train_$ARG2/train_$ARG2_error_%j.txt
+#SBATCH --output=o_%j.txt
+#SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:1
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
-#SBATCH --mail-user=marouane.hajri@helmholtz-munich.de
+#SBATCH --mail-user=Marouane.Hajri@helmholtz-munich.de
 #SBATCH --qos=gpu_normal
 #SBATCH --mail-type=ALL
 
