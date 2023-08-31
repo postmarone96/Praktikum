@@ -8,11 +8,11 @@ ARG2=${2:-""}
 export ARG1
 export ARG2
  
-mkdir -p $HOME/Praktikum/train_${ARG2}
+test -d train_${ARG2} || mkdir train_${ARG2}
 
-cp -n $HOME/Praktikum/train.slurm $HOME/Praktikum/train_${ARG2}/
+test -f train_${ARG2}/train.slurm || cp -n train.slurm train_${ARG2}/
 
-cd $HOME/Praktikum/train_${ARG2}
+cd train_${ARG2}
 
 # Submit the SLURM job
 sbatch train.slurm
