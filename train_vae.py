@@ -52,17 +52,19 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
     def __init__(self, hdf5_file):
-        self.hdf5_file = hdf5_file
+        self.f = h5py.File(hdf5_file, 'r')
+        self.all_slices = self.f['all_slices']
 
     def __len__(self):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            return len(f['all_slices'])
+        return len(self.all_slices)
 
     def __getitem__(self, idx):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            image_data = f['all_slices'][idx]
-            image_data = torch.tensor(image_data).unsqueeze(0)  # Adding a channel dimension
+        image_data = self.all_slices[idx]
+        image_data = torch.tensor(image_data).unsqueeze(0)  # Adding a channel dimension
         return image_data
+
+    def close(self):
+        self.f.close()
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
@@ -93,6 +95,10 @@ print_with_timestamp("AutoEncoder setup")
 # Before the training loop:
 start_epoch = 0
 checkpoint_path = 'vae_best_checkpoint.pth'
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
+optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
 
 if os.path.exists(checkpoint_path):
     checkpoint = torch.load(checkpoint_path)
@@ -113,10 +119,6 @@ else:
     epoch_gen_losses = []
     epoch_disc_losses = []
     intermediary_images = []
-    autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-    discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
-    optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
-    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
 
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
@@ -128,6 +130,7 @@ kl_weight = 1e-6
 n_epochs = 100
 val_interval = 10
 autoencoder_warm_up_n_epochs = 10
+num_example_images = 4
 
 autoencoderkl = autoencoderkl.to(device)
 discriminator = discriminator.to(device)
@@ -219,13 +222,13 @@ for epoch in range(n_epochs):
 
         # Save checkpoint every 10 epochs (or choose another interval)
         if (epoch + 1) % 10 == 0:
-            save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
+            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
 
         # Save checkpoint if validation loss improves
         if (epoch + 1) % val_interval == 0:
             if val_loss < vae_best_val_loss:
                 vae_best_val_loss = val_loss
-                save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
+                save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
 
 progress_bar.close()
 
