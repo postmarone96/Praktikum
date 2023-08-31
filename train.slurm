@@ -27,7 +27,7 @@ trap 'cleanup' SIGTERM
 
 echo "Copy data to scratch"
 find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
-cp $HOME/Praktikum/train_vae_1.py $SCRATCH_DIR/
+cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
 cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
 
 if [ -z "$ARG1" ]; then
@@ -49,7 +49,7 @@ OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
 
 echo "runnning train.py"
-python -u train_vae_1.py --output_file $OUTPUTFILE --batch_size $ARG3
+python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
 
 echo "Moving files (excluding .py and .nii.gz) to the job submission directory"
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
