@@ -7,14 +7,12 @@ ARG2=${2:-""}
 # Export them as environment variables so they can be accessed within the SLURM script
 export ARG1
 export ARG2
+ 
+mkdir -p $HOME/Praktikum/train_${ARG2}
 
-working_dir = $HOME/Praktikum/train_${ARG2}
+cp -n $HOME/Praktikum/train.slurm $HOME/Praktikum/train_${ARG2}/
 
-mkdir -p $WORKING_DIR
-
-cp -n $HOME/Praktikum/train.slurm $WORKING_DIR/
-
-cd $WORKING_DIR
+cd $HOME/Praktikum/train_${ARG2}
 
 # Submit the SLURM job
 sbatch train.slurm
