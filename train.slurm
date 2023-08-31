@@ -27,7 +27,7 @@ trap 'cleanup' SIGTERM
 
 echo "Copy data to scratch"
 find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
-cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
+cp $HOME/Praktikum/train_vae_1.py $SCRATCH_DIR/
 cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
 
 if [ -z "$ARG1" ]; then
