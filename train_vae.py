@@ -135,7 +135,7 @@ discriminator = discriminator.to(device)
 perceptual_loss= perceptual_loss.to(device)
 
 print_with_timestamp("Start setting")
-for epoch in range(n_epochs):
+for epoch in range(start_epoch, n_epochs):
     autoencoderkl.train()
     discriminator.train()
     epoch_loss = 0
@@ -232,10 +232,8 @@ progress_bar.close()
 
 # Get current date and time
 now = datetime.now()
-
 # Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file naming issues
-
 # Use date_time string in file name
 torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
 torch.save(discriminator.state_dict(), f'discriminator_weights_{date_time}.pth')
