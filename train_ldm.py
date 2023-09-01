@@ -118,18 +118,17 @@ else:
     epoch_losses = []
     val_losses = []
 
+inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+unet = unet.to(device)
+autoencoderkl = autoencoderkl.to(device).half()
+n_epochs = 200
+val_interval = 40
 check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
 print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
-
-inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
-unet = unet.to(device)
-autoencoderkl = autoencoderkl.to(device)
-n_epochs = 200
-val_interval = 40
 
 for epoch in range(start_epoch, n_epochs):
     unet.train()
