@@ -32,21 +32,15 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_ldm(epoch, model, optimizer, filename):
+def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, filename):
     checkpoint = {
         'epoch': epoch,
-        'model_state_dict': model.state_dict(),
+        'unet_state_dict': unet.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-    }
-    torch.save(checkpoint, filename)
-
-def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, filename):
-    checkpoint = {
-        'epoch': epoch,
-        'autoencoder_state_dict': autoencoder_model.state_dict(),
-        'discriminator_state_dict': discriminator_model.state_dict(),
-        'optimizer_g_state_dict': optimizer_g.state_dict(),
-        'optimizer_d_state_dict': optimizer_d.state_dict(),
+        'scaler_state_dict':scaler.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'epoch_losses': epoch_losses,
+        'val_losses': val_losses,
     }
     torch.save(checkpoint, filename)
 
@@ -68,7 +62,6 @@ class NiftiHDF5Dataset(Dataset):
 print_with_timestamp("Loading data")
 dataset = NiftiHDF5Dataset(args.output_file)
 
-vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 validation_split = 0.2
@@ -89,28 +82,7 @@ val_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
-print_with_timestamp("AutoEncoder setup")
-autoencoderkl = AutoencoderKL(
-    spatial_dims=2,
-    in_channels=1,
-    out_channels=1,
-    num_channels=(128, 128, 256),
-    latent_channels=3,
-    num_res_blocks=2,
-    attention_levels=(False, False, False),
-    with_encoder_nonlocal_attn=False,
-    with_decoder_nonlocal_attn=False,
-)
-autoencoderkl = autoencoderkl.to(device)
-
 print_with_timestamp("Start setting")
-
-# Get current date and time
-now = datetime.now()
-
-# Format date and time
-date_time = now.strftime("%Y%m%d_%H%M")
-
 unet = DiffusionModelUNet(
     spatial_dims=2,
     in_channels=3,
@@ -120,6 +92,23 @@ unet = DiffusionModelUNet(
     attention_levels=(False, True, True),
     num_head_channels=(0, 256, 512),
 )
+optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
+scaler = GradScaler()
+
+start_epoch = 0
+checkpoint_path = 'ldm_best_checkpoint.pth'
+if os.path.exists(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    start_epoch = checkpoint['epoch'] + 1
+    scaler.load_state_dict(checkpoint['scaler_state_dict'])
+    unet.load_state_dict(checkpoint['unet_state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    epoch_losses = checkpoint['epoch_losses']
+    val_losses = checkpoint['val_losses']
+    print_with_timestamp(f"Resuming from epoch {start_epoch}...")
+else:
+    epoch_losses = []
+    val_losses = []
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
 
@@ -127,22 +116,15 @@ check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
-
 print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
 
 inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
-
-optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
-
 unet = unet.to(device)
 n_epochs = 200
 val_interval = 40
-epoch_losses = []
-val_losses = []
-scaler = GradScaler()
 
-for epoch in range(n_epochs):
+for epoch in range(start_epoch, n_epochs):
     unet.train()
     autoencoderkl.eval()
     epoch_loss = 0
@@ -180,7 +162,6 @@ for epoch in range(n_epochs):
                 with autocast(enabled=True):
                     z_mu, z_sigma = autoencoderkl.encode(images)
                     z = autoencoderkl.sampling(z_mu, z_sigma)
-
                     noise = torch.randn_like(z).to(device)
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
@@ -192,24 +173,29 @@ for epoch in range(n_epochs):
                         timesteps=timesteps,
                         autoencoder_model=autoencoderkl,
                     )
-
                     loss = F.mse_loss(noise_pred.float(), noise.float())
-
                 val_loss += loss.item()
         val_loss /= val_step
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
         # Save checkpoint every 10 epochs (or choose another interval)
         if (epoch + 1) % 10 == 0:
-            save_checkpoint_ldm(epoch, unet, optimizer, f'checkpoint_epoch_{epoch}.pth')
+            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
 
         # Save checkpoint if validation loss improves
         if (epoch + 1) % val_interval == 0:
             if val_loss < ldm_best_val_loss:
                 ldm_best_val_loss = val_loss
-                save_checkpoint_ldm(epoch, unet, optimizer, 'best_checkpoint.pth')
-
+                save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
 progress_bar.close()
+
+# Get current date and time
+now = datetime.now()
+# Format date and time
+date_time = now.strftime("%Y%m%d_%H%M")
+# Use date_time string in file name
+torch.save(unet.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
+torch.save(scheduler.state_dict(), f'discriminator_weights_{date_time}.pth')
 
 # Plotting the learning curves
 plt.figure()
