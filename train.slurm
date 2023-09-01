@@ -19,6 +19,7 @@ OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG1/dataset.hdf5
 CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
+AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
 
 echo "Create the directory"
 mkdir -p $SCRATCH_DIR
@@ -60,6 +61,7 @@ if [ "$ARG1" = "vae" ]; then
     python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
+    cp $AE $SCRATCH_DIR/
     cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --output_file $OUTPUTFILE --batch_size $ARG3
 fi
