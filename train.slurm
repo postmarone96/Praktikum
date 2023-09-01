@@ -18,7 +18,8 @@ SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG1/dataset.hdf5
-CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
+AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
+LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
 
 echo "Create the directory"
@@ -26,9 +27,15 @@ mkdir -p $SCRATCH_DIR
 
 cleanup() {
     echo "Job was terminated. Cleaning up..."
+    FILENAME=$(date "+%Y%m%d-%H%M%S.txt")
+    FILEPATH="$TARGET_DIR/$FILENAME"
     mkdir -p $TARGET_DIR
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xargs -0 mv -t $TARGET_DIR
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print | while read -r file; do
+        echo "$file" >> "$FILEPATH"
+        mv "$file" "$TARGET_DIR"
+    done
     rm -rf $SCRATCH_DIR
+    echo "Job was terminated. Cleaning up..."
 }
 trap 'cleanup' SIGTERM
 
@@ -50,25 +57,24 @@ elif  [ -e "$DATASET" ]; then
     echo "dataset.hdf5 copied successfully."
 fi
 
-if [ -e "$CHECKPOINT" ]; then
-    cp $CHECKPOINT $SCRATCH_DIR/
-    echo "checkpoint copied successfully."
-fi 
-
 if [ "$ARG1" = "vae" ]; then
     echo "training vae"
+    if [ -e "$AE_CHECKPOINT" ]; then
+        cp $AE_CHECKPOINT $SCRATCH_DIR/
+        echo "ae_checkpoint copied successfully."
+    fi 
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
     python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
+
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
+    if [ -e "$LDM_CHECKPOINT" ]; then
+        cp $LDM_CHECKPOINT $SCRATCH_DIR/
+        echo "ldm_checkpoint copied successfully."
+    fi 
     cp $AE $SCRATCH_DIR/
     cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --output_file $OUTPUTFILE --batch_size $ARG3
 fi
-    
-echo "Moving files (excluding .py and .nii.gz) to the job submission directory"
-mkdir -p $TARGET_DIR
-find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print0 | xargs -0 mv -t $TARGET_DIR
- 
-echo "Clean up"
-rm -rf $SCRATCH_DIR
+
+cleanup
