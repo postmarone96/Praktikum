@@ -1,6 +1,7 @@
 import os
 import argparse
 import h5py
+import glob
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -94,6 +95,11 @@ unet = DiffusionModelUNet(
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
 scaler = GradScaler()
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+vae_path = glob.glob('autoencoderkl_weights_*.pth')
+vae_model = torch.load(vae_path)
+autoencoderkl.load_state_dict(vae_model)
+scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
 
 start_epoch = 0
 checkpoint_path = 'ldm_best_checkpoint.pth'
@@ -103,14 +109,13 @@ if os.path.exists(checkpoint_path):
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
     unet.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     epoch_losses = checkpoint['epoch_losses']
     val_losses = checkpoint['val_losses']
     print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
     epoch_losses = []
     val_losses = []
-
-scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
 
 check_data = first(train_loader)
 with torch.no_grad():
@@ -121,6 +126,7 @@ scale_factor = 1 / torch.std(z)
 
 inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 unet = unet.to(device)
+autoencoderkl = autoencoderkl.to(device)
 n_epochs = 200
 val_interval = 40
 
@@ -194,8 +200,8 @@ now = datetime.now()
 # Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
-torch.save(unet.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
-torch.save(scheduler.state_dict(), f'discriminator_weights_{date_time}.pth')
+torch.save(unet.state_dict(), f'unet_weights_{date_time}.pth')
+torch.save(scheduler.state_dict(), f'scheduler_{date_time}.pth')
 
 # Plotting the learning curves
 plt.figure()
