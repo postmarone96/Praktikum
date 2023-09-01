@@ -118,7 +118,6 @@ else:
     epoch_losses = []
     val_losses = []
 
-inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 unet = unet.to(device)
 autoencoderkl = autoencoderkl.to(device).half()
 n_epochs = 200
@@ -129,6 +128,8 @@ with torch.no_grad():
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
 print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
+
+inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
 for epoch in range(start_epoch, n_epochs):
     unet.train()
