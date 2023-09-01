@@ -9,9 +9,7 @@
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
-##SBATCH --mail-user=Marouane.Hajri@helmholtz-munich.de
 #SBATCH --qos=gpu_normal
-##SBATCH --mail-type=ALL
 
 echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
@@ -21,22 +19,42 @@ DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG1/dataset.hdf5
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
+FILENAME=$(date "+%Y%m%d.txt")
+FILEPATH="$TARGET_DIR/$FILENAME"
 
-echo "Create the directory"
+echo "Create the directories"
 mkdir -p $SCRATCH_DIR
+mkdir -p $TARGET_DIR
+touch $FILEPATH
 
-cleanup() {
-    echo "Job was terminated. Cleaning up..."
-    FILENAME=$(date "+%Y%m%d-%H%M%S.txt")
-    FILEPATH="$TARGET_DIR/$FILENAME"
-    mkdir -p $TARGET_DIR
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) -print | while read -r file; do
-        echo "$file" >> "$FILEPATH"
-        mv "$file" "$TARGET_DIR"
-    done
-    rm -rf $SCRATCH_DIR
-    echo "Job was terminated. Cleaning up..."
+log_and_move() {
+    local src=$1
+    local dest=$2
+    echo "$(basename "$src")" >> $FILEPATH
+    mv "$src" "$dest"
 }
+periodic_backup() {
+    while true; do
+        sleep 2h
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
+            if ! grep -q "$(basename "$file")" "$FILEPATH"; then
+                log_and_move "$file" "$TARGET_DIR"
+            fi
+        done
+    done
+}
+cleanup() {
+    echo "Final backup and cleanup..."
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
+        if ! grep -q "$(basename "$file")" "$FILEPATH"; then
+            log_and_move "$file" "$TARGET_DIR"
+        fi
+    done
+    kill $BACKUP_PID
+    rm -rf $SCRATCH_DIR
+    echo "Cleanup complete."
+}
+
 trap 'cleanup' SIGTERM
 
 echo "change to local scratch directory"
@@ -46,12 +64,14 @@ eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
+periodic_backup &
+BACKUP_PID=$!
+
 if [ ! -e "$DATASET" ]; then
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
     echo "preprocessing completed"
-
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
@@ -65,7 +85,6 @@ if [ "$ARG1" = "vae" ]; then
     fi 
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
     python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
-
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
