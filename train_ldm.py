@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import monai
+from monai.utils import first
 import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
