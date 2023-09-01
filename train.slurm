@@ -15,7 +15,7 @@ echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG1/dataset.hdf5
+DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
