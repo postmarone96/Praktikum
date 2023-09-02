@@ -120,6 +120,7 @@ else:
 
 unet = unet.to(device)
 autoencoderkl = autoencoderkl.to(device).half()
+scaler = scaler.to(device)
 n_epochs = 200
 val_interval = 40
 check_data = first(train_loader)
