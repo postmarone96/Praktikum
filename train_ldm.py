@@ -101,6 +101,8 @@ vae_path = glob.glob('autoencoderkl_weights_*.pth')
 vae_model = torch.load(vae_path[0])
 autoencoderkl.load_state_dict(vae_model)
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
+unet = unet.to(device)
+autoencoderkl = autoencoderkl.to(device).half()
 
 start_epoch = 0
 checkpoint_path = 'ldm_best_checkpoint.pth'
@@ -118,9 +120,6 @@ else:
     epoch_losses = []
     val_losses = []
 
-unet = unet.to(device)
-autoencoderkl = autoencoderkl.to(device).half()
-scaler = scaler.to(device)
 n_epochs = 200
 val_interval = 40
 check_data = first(train_loader)
