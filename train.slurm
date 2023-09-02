@@ -27,18 +27,18 @@ mkdir -p $SCRATCH_DIR
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
-log_and_move() {
+log_and_copy() {
     local src=$1
     local dest=$2
     echo "$(basename "$src")" >> $FILEPATH
-    mv "$src" "$dest"
+    cp "$src" "$dest"
 }
 periodic_backup() {
     while true; do
-        sleep 2h
+        sleep 30m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             if ! grep -q "$(basename "$file")" "$FILEPATH"; then
-                log_and_move "$file" "$TARGET_DIR"
+                log_and_copy "$file" "$TARGET_DIR"
             fi
         done
     done
@@ -47,7 +47,7 @@ cleanup() {
     echo "Final backup and cleanup..."
     find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
         if ! grep -q "$(basename "$file")" "$FILEPATH"; then
-            log_and_move "$file" "$TARGET_DIR"
+            log_and_copy "$file" "$TARGET_DIR"
         fi
     done
     kill $BACKUP_PID
