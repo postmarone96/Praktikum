@@ -217,16 +217,10 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         val_recon_losses.append(val_loss)
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
-
-        # Save checkpoint every 10 epochs (or choose another interval)
-        if (epoch + 1) % 10 == 0:
-            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
-
-        # Save checkpoint if validation loss improves
-        if (epoch + 1) % val_interval == 0:
-            if val_loss < vae_best_val_loss:
-                vae_best_val_loss = val_loss
-                save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
+        save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
+        if val_loss < vae_best_val_loss:
+            vae_best_val_loss = val_loss
+            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
 
 progress_bar.close()
 
