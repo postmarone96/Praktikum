@@ -121,7 +121,7 @@ else:
     val_losses = []
 
 n_epochs = 200
-val_interval = 40
+val_interval = 10
 check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
@@ -185,15 +185,10 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
-        # Save checkpoint every 10 epochs (or choose another interval)
-        if (epoch + 1) % 10 == 0:
-            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
-
-        # Save checkpoint if validation loss improves
-        if (epoch + 1) % val_interval == 0:
-            if val_loss < ldm_best_val_loss:
-                ldm_best_val_loss = val_loss
-                save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
+        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
+        if val_loss < ldm_best_val_loss:
+            ldm_best_val_loss = val_loss
+            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
 progress_bar.close()
 
 # Get current date and time
