@@ -121,7 +121,7 @@ else:
     val_losses = []
 
 n_epochs = 200
-val_interval = 10
+val_interval = 5
 check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
