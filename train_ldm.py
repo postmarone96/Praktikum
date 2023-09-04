@@ -19,6 +19,8 @@ from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
 from generative.networks.schedulers import DDPMScheduler
 
+# clear CUDA
+torch.cuda.empty_cache()
 
 # parser
 parser = argparse.ArgumentParser()
