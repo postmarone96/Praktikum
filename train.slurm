@@ -35,7 +35,7 @@ log_and_copy() {
 }
 periodic_backup() {
     while true; do
-        sleep 30m
+        sleep 29m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             if ! grep -q "$(basename "$file")" "$FILEPATH"; then
                 log_and_copy "$file" "$TARGET_DIR"
@@ -43,13 +43,7 @@ periodic_backup() {
         done
     done
 }
-print_scratch_dir_contents() {
-    while true; do
-        sleep 10m
-        echo "Current contents of SCRATCH_DIR:"
-        ls $SCRATCH_DIR
-    done
-}
+
 cleanup() {
     echo "Final backup and cleanup..."
     find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
@@ -73,7 +67,6 @@ echo "env activated"
 
 periodic_backup &
 BACKUP_PID=$!
-print_scratch_dir_contents &
 
 if [ ! -e "$DATASET" ]; then
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
