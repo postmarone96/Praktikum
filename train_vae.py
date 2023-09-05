@@ -97,6 +97,12 @@ autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
+adv_loss = PatchAdversarialLoss(criterion="least_squares")
+adv_weight = 0.01
+perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
+autoencoderkl = autoencoderkl.to(device)
+discriminator = discriminator.to(device)
+perceptual_loss= perceptual_loss.to(device)
 
 if os.path.exists(checkpoint_path):
     checkpoint = torch.load(checkpoint_path)
@@ -118,9 +124,6 @@ else:
     epoch_disc_losses = []
     intermediary_images = []
 
-adv_loss = PatchAdversarialLoss(criterion="least_squares")
-adv_weight = 0.01
-perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
 perceptual_weight = 0.001
 scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
@@ -129,10 +132,6 @@ n_epochs = 100
 val_interval = 5
 autoencoder_warm_up_n_epochs = 10
 num_example_images = 4
-
-autoencoderkl = autoencoderkl.to(device)
-discriminator = discriminator.to(device)
-perceptual_loss= perceptual_loss.to(device)
 
 print_with_timestamp("Start setting")
 for epoch in range(start_epoch, n_epochs):
