@@ -34,13 +34,15 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, filename):
+def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, filename):
     checkpoint = {
         'epoch': epoch,
         'autoencoder_state_dict': autoencoder_model.state_dict(),
         'discriminator_state_dict': discriminator_model.state_dict(),
         'optimizer_g_state_dict': optimizer_g.state_dict(),
         'optimizer_d_state_dict': optimizer_d.state_dict(),
+        'scheduler_d_state_dict': scheduler_d.state_dict(),
+        'scheduler_g_state_dict': scheduler_g.state_dict(),
         'val_recon_losses': val_recon_losses,
         'epoch_recon_losses': epoch_recon_losses,
         'epoch_gen_losses': epoch_gen_losses,
@@ -97,6 +99,8 @@ autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
+scheduler_g = torch.optim.lr_scheduler.StepLR(optimizer_g, step_size=10, gamma=0.7)
+scheduler_d = torch.optim.lr_scheduler.StepLR(optimizer_d, step_size=10, gamma=0.7)
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
@@ -111,6 +115,8 @@ if os.path.exists(checkpoint_path):
     discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
     optimizer_g.load_state_dict(checkpoint['optimizer_g_state_dict'])
     optimizer_d.load_state_dict(checkpoint['optimizer_d_state_dict'])
+    scheduler_d.load_state_dict(checkpoint['optimizer_d_state_dict'])
+    scheduler_g.load_state_dict(checkpoint['optimizer_g_state_dict'])
     val_recon_losses = checkpoint['val_recon_losses']
     epoch_recon_losses = checkpoint['epoch_recon_losses']
     epoch_gen_losses = checkpoint['epoch_gen_losses']
@@ -163,7 +169,8 @@ for epoch in range(start_epoch, n_epochs):
         scaler_g.scale(loss_g).backward()
         scaler_g.step(optimizer_g)
         scaler_g.update()
-
+        scheduler_g.step()
+        
         if epoch > autoencoder_warm_up_n_epochs:
             with autocast(enabled=True):
                 optimizer_d.zero_grad(set_to_none=True)
@@ -179,7 +186,8 @@ for epoch in range(start_epoch, n_epochs):
             scaler_d.scale(loss_d).backward()
             scaler_d.step(optimizer_d)
             scaler_d.update()
-
+            scheduler_d.step()
+            
         epoch_loss += recons_loss.item()
         if epoch > autoencoder_warm_up_n_epochs:
             gen_epoch_loss += generator_loss.item()
@@ -216,10 +224,10 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         val_recon_losses.append(val_loss)
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
-        save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
         if val_loss < vae_best_val_loss:
             vae_best_val_loss = val_loss
-            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
+            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
 
 progress_bar.close()
 
