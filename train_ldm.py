@@ -12,6 +12,7 @@ import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
+from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 from generative.inferers import LatentDiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
@@ -36,13 +37,14 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, filename):
+def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, filename):
     checkpoint = {
         'epoch': epoch,
         'unet_state_dict': unet.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
+        'scheduler_lr_state_dict': scheduler_lr.state_dict(),
         'epoch_losses': epoch_losses,
         'val_losses': val_losses,
     }
@@ -97,6 +99,7 @@ unet = DiffusionModelUNet(
     num_head_channels=(0, 256, 512),
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
+scheduler_lr = StepLR(optimizer, step_size=30, gamma=0.1)
 scaler = GradScaler()
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('autoencoderkl_weights_*.pth')
@@ -115,6 +118,7 @@ if os.path.exists(checkpoint_path):
     unet.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+    scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
     epoch_losses = checkpoint['epoch_losses']
     val_losses = checkpoint['val_losses']
     print_with_timestamp(f"Resuming from epoch {start_epoch}...")
@@ -155,7 +159,7 @@ for epoch in range(start_epoch, n_epochs):
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
-
+        scheduler_lr.step()
         epoch_loss += loss.item()
 
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
@@ -187,10 +191,10 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
-        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
         if val_loss < ldm_best_val_loss:
             ldm_best_val_loss = val_loss
-            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
+            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
 progress_bar.close()
 
 # Get current date and time
