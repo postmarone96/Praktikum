@@ -24,9 +24,8 @@ torch.cuda.empty_cache()
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
 parser.add_argument("--batch_size", type=int, default=20)
-parser.add_argument("--num_workers", type=int, default=16)
-parser.add_argument("--lr_optim_g", type=float, default=1e-4)
-parser.add_argument("--lr_optim_d", type=float, default=5e-4)
+parser.add_argument("--lr_step", type=float, default=10)
+parser.add_argument("--lr_gamma", type=float, default=0.5)
 args = parser.parse_args()
 
 def print_with_timestamp(message):
@@ -97,10 +96,10 @@ start_epoch = 0
 checkpoint_path = 'vae_best_checkpoint.pth'
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
-optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr_optim_g)
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=args.lr_optim_d)
-scheduler_g = torch.optim.lr_scheduler.StepLR(optimizer_g, step_size=10, gamma=0.7)
-scheduler_d = torch.optim.lr_scheduler.StepLR(optimizer_d, step_size=10, gamma=0.7)
+optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=1e-4)
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=5e-4)
+scheduler_g = torch.optim.lr_scheduler.StepLR(optimizer_g, step_size=args.lr_step, gamma=args.lr_gamma)
+scheduler_d = torch.optim.lr_scheduler.StepLR(optimizer_d, step_size=args.lr_step, gamma=args.lr_gamma)
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
