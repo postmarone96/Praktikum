@@ -23,9 +23,9 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--batch_size", type=int, default=20)
+parser.add_argument("--lr", type=str, default=1e-4)
 parser.add_argument("--lr_step", type=float, default=10)
-parser.add_argument("--lr_gamma", type=float, default=0.5)
+parser.add_argument("--lr_gamma", type=float, default=0.9)
 args = parser.parse_args()
 
 def print_with_timestamp(message):
@@ -69,7 +69,7 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(hdf5_file=args.output_file)
+dataset = NiftiHDF5Dataset(hdf5_file=output_file)
 
 validation_split = 0.2
 dataset_size = len(dataset)
@@ -83,8 +83,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -96,8 +96,8 @@ start_epoch = 0
 checkpoint_path = 'vae_best_checkpoint.pth'
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
-optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=1e-4)
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=5e-4)
+optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr)
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=5*args.lr)
 scheduler_g = torch.optim.lr_scheduler.StepLR(optimizer_g, step_size=args.lr_step, gamma=args.lr_gamma)
 scheduler_d = torch.optim.lr_scheduler.StepLR(optimizer_d, step_size=args.lr_step, gamma=args.lr_gamma)
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
@@ -134,7 +134,7 @@ scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
 kl_weight = 1e-6
 n_epochs = 100
-val_interval = 5
+val_interval = 1
 autoencoder_warm_up_n_epochs = 10
 num_example_images = 4
 
@@ -168,7 +168,8 @@ for epoch in range(start_epoch, n_epochs):
         scaler_g.scale(loss_g).backward()
         scaler_g.step(optimizer_g)
         scaler_g.update()
-        scheduler_g.step()
+        if epoch > args.lr_step :
+            scheduler_g.step()
         
         if epoch > autoencoder_warm_up_n_epochs:
             with autocast(enabled=True):
@@ -185,7 +186,8 @@ for epoch in range(start_epoch, n_epochs):
             scaler_d.scale(loss_d).backward()
             scaler_d.step(optimizer_d)
             scaler_d.update()
-            scheduler_d.step()
+            if epoch > args.lr_step :
+                scheduler_d.step()
             
         epoch_loss += recons_loss.item()
         if epoch > autoencoder_warm_up_n_epochs:
@@ -203,31 +205,38 @@ for epoch in range(start_epoch, n_epochs):
     epoch_gen_losses.append(gen_epoch_loss / (step + 1))
     epoch_disc_losses.append(disc_epoch_loss / (step + 1))
 
-    if (epoch + 1) % val_interval == 0:
+    if epoch % val_interval == 0:
         autoencoderkl.eval()
         val_loss = 0
         with torch.no_grad():
             for val_step, batch in enumerate(val_loader, start=1):
                 images = batch.to(device)
-
                 with autocast(enabled=True):
                     reconstruction, z_mu, z_sigma = autoencoderkl(images)
                     # Get the first reconstruction from the first validation batch for visualisation purposes
                     if val_step == 1:
                         intermediary_images.append(reconstruction[:num_example_images, 0])
-
                     recons_loss = F.l1_loss(images.float(), reconstruction.float())
-
                 val_loss += recons_loss.item()
-
         val_loss /= val_step
         val_recon_losses.append(val_loss)
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
+    if epoch % 5 == 0 and epoch > 0:
         save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
         if val_loss < vae_best_val_loss:
             vae_best_val_loss = val_loss
             save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
-
+    
+    # Update the plot after each epoch (or validation interval)
+    plt.figure(figsize=(10, 5))
+    plt.plot(epoch_recon_losses, label='Training Reconstruction Loss')
+    plt.plot(range(0, epoch, val_interval), val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.title('Learning Curves')
+    plt.savefig(f'VAE_learning_curves.png')
+    plt.close()
 progress_bar.close()
 
 # Get current date and time
