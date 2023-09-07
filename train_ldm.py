@@ -125,7 +125,7 @@ else:
     val_losses = []
 
 n_epochs = 200
-val_interval = 1
+val_interval = 2
 check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
@@ -157,7 +157,6 @@ for epoch in range(start_epoch, n_epochs):
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
-        scheduler_lr.step()
         epoch_loss += loss.item()
 
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
@@ -187,6 +186,7 @@ for epoch in range(start_epoch, n_epochs):
                     loss = F.mse_loss(noise_pred.float(), noise.float())
                 val_loss += loss.item()
         val_loss /= val_step
+        scheduler_lr.step(val_loss)
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
     if epoch % 5 == 0 and epoch > 0:
@@ -199,7 +199,7 @@ for epoch in range(start_epoch, n_epochs):
     plt.figure(figsize=(10, 5))
     plt.title("Learning Curves", fontsize=20)
     plt.plot(epoch_losses, linewidth=2.0, label="Train")
-    plt.plot(np.linspace(val_interval, epoch, int(epoch / val_interval)), val_losses, linewidth=2.0, label="Validation")
+    plt.plot(range(0, epoch, val_interval), val_losses, linewidth=2.0, label="Validation")
     plt.yticks(fontsize=12)
     plt.xticks(fontsize=12)
     plt.xlabel("Epochs", fontsize=16)

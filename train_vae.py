@@ -133,7 +133,7 @@ scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
 kl_weight = 1e-6
 n_epochs = 100
-val_interval = 1
+val_interval = 2
 autoencoder_warm_up_n_epochs = 10
 num_example_images = 4
 
@@ -167,7 +167,6 @@ for epoch in range(start_epoch, n_epochs):
         scaler_g.scale(loss_g).backward()
         scaler_g.step(optimizer_g)
         scaler_g.update()
-        scheduler_g.step()
         
         if epoch > autoencoder_warm_up_n_epochs:
             with autocast(enabled=True):
@@ -184,7 +183,6 @@ for epoch in range(start_epoch, n_epochs):
             scaler_d.scale(loss_d).backward()
             scaler_d.step(optimizer_d)
             scaler_d.update()
-            scheduler_d.step()
             
         epoch_loss += recons_loss.item()
         if epoch > autoencoder_warm_up_n_epochs:
@@ -216,6 +214,8 @@ for epoch in range(start_epoch, n_epochs):
                     recons_loss = F.l1_loss(images.float(), reconstruction.float())
                 val_loss += recons_loss.item()
         val_loss /= val_step
+        scheduler_g.step(val_loss)  
+        scheduler_d.step(val_loss)
         val_recon_losses.append(val_loss)
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
     if epoch % 5 == 0 and epoch > 0:
