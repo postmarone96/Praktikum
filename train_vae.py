@@ -68,7 +68,7 @@ vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(hdf5_file=output_file)
+dataset = NiftiHDF5Dataset(hdf5_file=args.output_file)
 
 validation_split = 0.2
 dataset_size = len(dataset)
@@ -96,7 +96,7 @@ checkpoint_path = 'vae_best_checkpoint.pth'
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr)
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=5*args.lr)
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(args.lr)/2)
 scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min')
 scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min')
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
