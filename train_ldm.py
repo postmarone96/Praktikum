@@ -188,6 +188,18 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         scheduler_lr.step(val_loss)
         val_losses.append(val_loss)
+        # Update the plot after each epoch (or validation interval)
+        plt.figure(figsize=(10, 5))
+        plt.title("Learning Curves", fontsize=20)
+        plt.plot(epoch_losses, linewidth=2.0, label="Train")
+        plt.plot(range(0, epoch, val_interval), val_losses, linewidth=2.0, label="Validation")
+        plt.yticks(fontsize=12)
+        plt.xticks(fontsize=12)
+        plt.xlabel("Epochs", fontsize=16)
+        plt.ylabel("Loss", fontsize=16)
+        plt.legend(prop={"size": 14})
+        plt.savefig(f'LDM_learning_curves.png')
+        plt.close()
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
     if epoch % 5 == 0 and epoch > 0:
         save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')

@@ -217,6 +217,16 @@ for epoch in range(start_epoch, n_epochs):
         scheduler_g.step(val_loss)  
         scheduler_d.step(val_loss)
         val_recon_losses.append(val_loss)
+        # Update the plot after each epoch (or validation interval)
+        plt.figure(figsize=(10, 5))
+        plt.plot(range(0, epoch, val_interval), epoch_recon_losses, label='Training Reconstruction Loss')
+        plt.plot(range(0, epoch, val_interval), val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.title('Learning Curves')
+        plt.savefig('VAE_learning_curves.png')
+        plt.close()
         print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
     if epoch % 5 == 0 and epoch > 0:
         save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
@@ -224,16 +234,7 @@ for epoch in range(start_epoch, n_epochs):
             vae_best_val_loss = val_loss
             save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
     
-    # Update the plot after each epoch (or validation interval)
-    plt.figure(figsize=(10, 5))
-    plt.plot(epoch_recon_losses, label='Training Reconstruction Loss')
-    plt.plot(range(0, epoch, val_interval), val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.legend()
-    plt.title('Learning Curves')
-    plt.savefig('VAE_learning_curves.png')
-    plt.close()
+    
 progress_bar.close()
 
 # Get current date and time
