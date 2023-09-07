@@ -18,7 +18,7 @@ TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG6/dataset.hdf5
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG6/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG7/ldm_best_checkpoint.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
+AE=$HOME/Praktikum/train_$ARG2/job_$ARG6/autoencoderkl_weights_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
@@ -71,7 +71,7 @@ BACKUP_PID=$!
 if [ ! -e "$DATASET" ]; then
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
