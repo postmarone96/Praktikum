@@ -10,6 +10,7 @@ import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from generative.inferers import LatentDiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
@@ -24,8 +25,6 @@ torch.cuda.empty_cache()
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
 parser.add_argument("--lr", type=str, default=1e-4)
-parser.add_argument("--lr_step", type=float, default=10)
-parser.add_argument("--lr_gamma", type=float, default=0.9)
 args = parser.parse_args()
 
 def print_with_timestamp(message):
@@ -98,8 +97,8 @@ autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=args.lr)
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=5*args.lr)
-scheduler_g = torch.optim.lr_scheduler.StepLR(optimizer_g, step_size=args.lr_step, gamma=args.lr_gamma)
-scheduler_d = torch.optim.lr_scheduler.StepLR(optimizer_d, step_size=args.lr_step, gamma=args.lr_gamma)
+scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min')
+scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min')
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
@@ -168,8 +167,7 @@ for epoch in range(start_epoch, n_epochs):
         scaler_g.scale(loss_g).backward()
         scaler_g.step(optimizer_g)
         scaler_g.update()
-        if epoch > args.lr_step :
-            scheduler_g.step()
+        scheduler_g.step()
         
         if epoch > autoencoder_warm_up_n_epochs:
             with autocast(enabled=True):
@@ -186,8 +184,7 @@ for epoch in range(start_epoch, n_epochs):
             scaler_d.scale(loss_d).backward()
             scaler_d.step(optimizer_d)
             scaler_d.update()
-            if epoch > args.lr_step :
-                scheduler_d.step()
+            scheduler_d.step()
             
         epoch_loss += recons_loss.item()
         if epoch > autoencoder_warm_up_n_epochs:
@@ -205,7 +202,7 @@ for epoch in range(start_epoch, n_epochs):
     epoch_gen_losses.append(gen_epoch_loss / (step + 1))
     epoch_disc_losses.append(disc_epoch_loss / (step + 1))
 
-    if epoch % val_interval == 0:
+    if epoch % val_interval == 0 and epoch > 0:
         autoencoderkl.eval()
         val_loss = 0
         with torch.no_grad():
@@ -235,7 +232,7 @@ for epoch in range(start_epoch, n_epochs):
     plt.ylabel('Loss')
     plt.legend()
     plt.title('Learning Curves')
-    plt.savefig(f'VAE_learning_curves.png')
+    plt.savefig('VAE_learning_curves.png')
     plt.close()
 progress_bar.close()
 
@@ -246,15 +243,6 @@ date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file
 # Use date_time string in file name
 torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
 torch.save(discriminator.state_dict(), f'discriminator_weights_{date_time}.pth')
-
-plt.figure(figsize=(10, 5))
-plt.plot(epoch_recon_losses, label='Training Reconstruction Loss')
-plt.plot(range(0, n_epochs, val_interval), val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-plt.title('Learning Curves')
-plt.savefig('VAE_learning_curves.png')
 
 del discriminator
 del perceptual_loss

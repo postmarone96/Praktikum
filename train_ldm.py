@@ -12,7 +12,7 @@ import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from generative.inferers import LatentDiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
@@ -26,10 +26,7 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--batch_size", type=int, default=10)
-parser.add_argument("--num_workers", type=int, default=16)
-parser.add_argument("--lr_optim_g", type=float, default=1e-4)
-parser.add_argument("--lr_optim_d", type=float, default=5e-4)
+parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
 
 def print_with_timestamp(message):
@@ -37,7 +34,7 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, filename):
+def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, filename):
     checkpoint = {
         'epoch': epoch,
         'unet_state_dict': unet.state_dict(),
@@ -47,6 +44,7 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
         'scheduler_lr_state_dict': scheduler_lr.state_dict(),
         'epoch_losses': epoch_losses,
         'val_losses': val_losses,
+        'scale_factor': scale_factor,
     }
     torch.save(checkpoint, filename)
 
@@ -82,8 +80,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=args.batch_size, shuffle=False, num_workers=args.num_workers, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -98,8 +96,8 @@ unet = DiffusionModelUNet(
     attention_levels=(False, True, True),
     num_head_channels=(0, 256, 512),
 )
-optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
-scheduler_lr = StepLR(optimizer, step_size=30, gamma=0.1)
+optimizer = torch.optim.Adam(unet.parameters(), lr=args.lr)
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min')
 scaler = GradScaler()
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('autoencoderkl_weights_*.pth')
@@ -127,7 +125,7 @@ else:
     val_losses = []
 
 n_epochs = 200
-val_interval = 5
+val_interval = 1
 check_data = first(train_loader)
 with torch.no_grad():
     with autocast(enabled=True):
@@ -165,7 +163,7 @@ for epoch in range(start_epoch, n_epochs):
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
     epoch_losses.append(epoch_loss / (step + 1))
 
-    if (epoch + 1) % val_interval == 0:
+    if epoch % val_interval == 0 and epoch > 0:
         unet.eval()
         val_loss = 0
         with torch.no_grad():
@@ -191,10 +189,24 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
-        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
+    if epoch % 5 == 0 and epoch > 0:
+        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
         if val_loss < ldm_best_val_loss:
             ldm_best_val_loss = val_loss
-            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
+            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
+    
+    # Update the plot after each epoch (or validation interval)
+    plt.figure(figsize=(10, 5))
+    plt.title("Learning Curves", fontsize=20)
+    plt.plot(epoch_losses, linewidth=2.0, label="Train")
+    plt.plot(np.linspace(val_interval, epoch, int(epoch / val_interval)), val_losses, linewidth=2.0, label="Validation")
+    plt.yticks(fontsize=12)
+    plt.xticks(fontsize=12)
+    plt.xlabel("Epochs", fontsize=16)
+    plt.ylabel("Loss", fontsize=16)
+    plt.legend(prop={"size": 14})
+    plt.savefig(f'LDM_learning_curves.png')
+    plt.close()
 progress_bar.close()
 
 # Get current date and time
@@ -204,20 +216,6 @@ date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
 torch.save(unet.state_dict(), f'unet_weights_{date_time}.pth')
 torch.save(scheduler.state_dict(), f'scheduler_{date_time}.pth')
+torch.save(scale_factor, f'scale_factor_{date_time}.pth')
 
-# Plotting the learning curves
-plt.figure()
-plt.title("Learning Curves", fontsize=20)
-plt.plot(np.linspace(1, n_epochs, n_epochs), epoch_losses, linewidth=2.0, label="Train")
-plt.plot(
-    np.linspace(val_interval, n_epochs, int(n_epochs / val_interval)),
-    val_losses,
-    linewidth=2.0,
-    label="Validation"
-)
-plt.yticks(fontsize=12)
-plt.xticks(fontsize=12)
-plt.xlabel("Epochs", fontsize=16)
-plt.ylabel("Loss", fontsize=16)
-plt.legend(prop={"size": 14})
-plt.savefig('LDM_learning_curves.png')
+torch.cuda.empty_cache()

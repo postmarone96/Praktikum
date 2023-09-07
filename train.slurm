@@ -15,10 +15,10 @@ echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG6/dataset.hdf5
-AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG6/vae_best_checkpoint.pth
-LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG7/ldm_best_checkpoint.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG6/autoencoderkl_weights_*.pth
+DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
+AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
+LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
+AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/autoencoderkl_weights_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
@@ -35,7 +35,7 @@ log_and_copy() {
 }
 periodic_backup() {
     while true; do
-        sleep 29m
+        sleep 9m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             if ! grep -q "$(basename "$file")" "$FILEPATH"; then
                 log_and_copy "$file" "$TARGET_DIR"
@@ -85,7 +85,7 @@ if [ "$ARG1" = "vae" ]; then
         echo "ae_checkpoint copied successfully."
     fi 
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3 --lr_step $ARG4 --lr_gamma $ARG5
+    python -u train_vae.py --output_file $OUTPUTFILE --lr $ARG3
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
@@ -94,7 +94,7 @@ elif [ "$ARG1" = "ldm" ]; then
     fi 
     cp $AE $SCRATCH_DIR/
     cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
-    python -u train_ldm.py --output_file $OUTPUTFILE --batch_size $ARG3
+    python -u train_ldm.py --output_file $OUTPUTFILE --lr $ARG3
 fi
 
 cleanup
