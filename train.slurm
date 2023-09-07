@@ -71,7 +71,7 @@ BACKUP_PID=$!
 if [ ! -e "$DATASET" ]; then
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
@@ -85,7 +85,7 @@ if [ "$ARG1" = "vae" ]; then
         echo "ae_checkpoint copied successfully."
     fi 
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3
+    python -u train_vae.py --output_file $OUTPUTFILE --batch_size $ARG3 --lr_step $ARG4 --lr_gamma $ARG5
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
