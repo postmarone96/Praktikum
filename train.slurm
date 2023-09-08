@@ -37,8 +37,13 @@ periodic_backup() {
     while true; do
         sleep 9m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
-            if ! grep -q "$(basename "$file")" "$FILEPATH"; then
-                log_and_copy "$file" "$TARGET_DIR"
+            basefile=$(basename "$file")
+            if [[ "$basefile" == *.png ]]; then
+                cp "$file" "$TARGET_DIR/$basefile"
+            else
+                if ! grep -q "$basefile" "$FILEPATH"; then
+                    log_and_copy "$file" "$TARGET_DIR"
+                fi
             fi
         done
     done
@@ -47,8 +52,13 @@ periodic_backup() {
 cleanup() {
     echo "Final backup and cleanup..."
     find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
-        if ! grep -q "$(basename "$file")" "$FILEPATH"; then
-            log_and_copy "$file" "$TARGET_DIR"
+        basefile=$(basename "$file")
+        if [[ "$basefile" == *.png ]]; then
+            cp "$file" "$TARGET_DIR/$basefile"
+        else
+            if ! grep -q "$basefile" "$FILEPATH"; then
+                log_and_copy "$file" "$TARGET_DIR"
+            fi
         fi
     done
     kill $BACKUP_PID
