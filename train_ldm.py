@@ -210,6 +210,7 @@ for epoch in range(start_epoch, n_epochs):
         color = 'tab:blue'
         ax1.set_title('Learning Curves and Learning Rate', fontsize=20)
         ax1.set_xlabel('Epochs', fontsize=16)
+        ax1.set_xticks(range(epoch + 1))
         ax1.set_ylabel('Loss', fontsize=16, color=color)
         ax1.plot(range(epoch + 1), epoch_losses, color=color, label="Train")
         ax1.plot(val_epochs, val_losses, 'b--', label="Validation")
