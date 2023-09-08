@@ -255,8 +255,8 @@ for epoch in range(start_epoch, n_epochs):
         # Create the line that will go on the right y-axis
         ax2 = ax1.twinx()
         ax2.set_ylabel('Learning Rate', color='tab:green')
-        ax2.plot(range(epoch + 1), lr_rates_g, label='Generator Learning Rate', linestyle='dotted', color='tab:green')
-        ax2.plot(range(epoch + 1), lr_rates_d, label='Discriminator Learning Rate', linestyle='dotted', color='tab:red')
+        ax2.plot(val_epochs, lr_rates_g, label='Generator Learning Rate', linestyle='dotted', color='tab:green')
+        ax2.plot(val_epochs, lr_rates_d, label='Discriminator Learning Rate', linestyle='dotted', color='tab:red')
         ax2.tick_params(axis='y', labelcolor='tab:green')
         ax2.legend(loc='upper right')
 

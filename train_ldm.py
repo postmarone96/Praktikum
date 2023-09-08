@@ -219,7 +219,7 @@ for epoch in range(start_epoch, n_epochs):
         ax2 = ax1.twinx()
         color = 'tab:red'
         ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
-        ax2.plot(range(epoch + 1), lr_rates, color=color, label='Learning Rate')
+        ax2.plot(val_epochs, lr_rates, color=color, label='Learning Rate')
         ax2.tick_params(axis='y', labelcolor=color)
 
         fig.tight_layout()
