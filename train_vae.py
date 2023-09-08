@@ -243,7 +243,7 @@ for epoch in range(start_epoch, n_epochs):
                                 epoch_gen_losses, epoch_disc_losses, intermediary_images, lr_rates_g, lr_rates_d, val_epochs, 'vae_best_checkpoint.pth')
     
     if epoch > val_interval:
-        fig, ax1 = plt.subplots(figsize=(15, 5))
+        fig, ax1 = plt.subplots(figsize=(10, 5))
 
         ax1.set_xlabel('Epoch')
         ax1.set_ylabel('Loss', color='tab:blue')
