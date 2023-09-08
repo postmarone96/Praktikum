@@ -34,7 +34,7 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, filename):
+def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, filename):
     checkpoint = {
         'epoch': epoch,
         'unet_state_dict': unet.state_dict(),
@@ -45,6 +45,8 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
         'epoch_losses': epoch_losses,
         'val_losses': val_losses,
         'scale_factor': scale_factor,
+        'val_epochs': val_epochs,
+        'lr_rates': lr_rates,
     }
     torch.save(checkpoint, filename)
 
@@ -119,10 +121,15 @@ if os.path.exists(checkpoint_path):
     scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
     epoch_losses = checkpoint['epoch_losses']
     val_losses = checkpoint['val_losses']
+    val_epochs = checkpoint['val_epochs']
+    lr_rates = checkpoint['lr_rates']
     print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
     epoch_losses = []
     val_losses = []
+    val_epochs = []
+    lr_rates = []
+
 
 n_epochs = 200
 val_interval = 2
@@ -163,6 +170,7 @@ for epoch in range(start_epoch, n_epochs):
     epoch_losses.append(epoch_loss / (step + 1))
 
     if epoch % val_interval == 0 and epoch > 0:
+        val_epochs.append(epoch)
         unet.eval()
         val_loss = 0
         with torch.no_grad():
@@ -187,26 +195,38 @@ for epoch in range(start_epoch, n_epochs):
                 val_loss += loss.item()
         val_loss /= val_step
         scheduler_lr.step(val_loss)
+        lr_unet = optimizer.param_groups[0]['lr']
+        lr_rates.append(lr_unet)
         val_losses.append(val_loss)
-        # Update the plot after each epoch (or validation interval)
-        plt.figure(figsize=(10, 5))
-        plt.title("Learning Curves", fontsize=20)
-        plt.plot(range(epoch + 1), epoch_losses, linewidth=2.0, label="Train")
-        plt.plot(range(0, epoch + 1, val_interval)[:len(val_losses)], val_losses, linewidth=2.0, label="Validation")
-        plt.yticks(fontsize=12)
-        plt.xticks(fontsize=12)
-        plt.xlabel("Epochs", fontsize=16)
-        plt.ylabel("Loss", fontsize=16)
-        plt.legend(prop={"size": 14})
-        plt.savefig(f'LDM_learning_curves.png')
-        plt.close()
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
     if epoch % 5 == 0 and epoch > 0:
-        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, f'ldm_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_checkpoint_epoch_{epoch}.pth')
         if val_loss < ldm_best_val_loss:
             ldm_best_val_loss = val_loss
-            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, 'ldm_best_checkpoint.pth')
-    
+            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, 'ldm_best_checkpoint.pth')
+    if epoch > val_interval:
+        fig, ax1 = plt.subplots(figsize=(10, 5))
+        # Plot Losses
+        color = 'tab:blue'
+        ax1.set_title('Learning Curves and Learning Rate', fontsize=20)
+        ax1.set_xlabel('Epochs', fontsize=16)
+        ax1.set_ylabel('Loss', fontsize=16, color=color)
+        ax1.plot(range(epoch + 1), epoch_losses, color=color, label="Train")
+        ax1.plot(val_epochs, val_losses, 'b--', label="Validation")
+        ax1.tick_params(axis='y', labelcolor=color)
+
+        # Twin axis for learning rates
+        ax2 = ax1.twinx()
+        color = 'tab:red'
+        ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
+        ax2.plot(range(epoch + 1), lr_rates, color=color, label='Learning Rate')
+        ax2.tick_params(axis='y', labelcolor=color)
+
+        fig.tight_layout()
+        fig.legend(loc="upper right", bbox_to_anchor=(0.8,0.9))
+
+        plt.savefig('LDM_learning_curves.png')
+        plt.close()
 progress_bar.close()
 
 # Get current date and time

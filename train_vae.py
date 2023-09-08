@@ -32,7 +32,7 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, filename):
+def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, lr_rates_g, lr_rates_d, val_epochs, filename):
     checkpoint = {
         'epoch': epoch,
         'autoencoder_state_dict': autoencoder_model.state_dict(),
@@ -45,7 +45,10 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
         'epoch_recon_losses': epoch_recon_losses,
         'epoch_gen_losses': epoch_gen_losses,
         'epoch_disc_losses': epoch_disc_losses,
-        'intermediary_images': intermediary_images
+        'intermediary_images': intermediary_images,
+        'lr_rates_g': lr_rates_g,
+        'lr_rates_d': lr_rates_d,
+        'val_epochs': val_epochs,
     }
     torch.save(checkpoint, filename)
 
@@ -120,6 +123,9 @@ if os.path.exists(checkpoint_path):
     epoch_gen_losses = checkpoint['epoch_gen_losses']
     epoch_disc_losses = checkpoint['epoch_disc_losses']
     intermediary_images = checkpoint['intermediary_images']
+    val_epochs = checkpoint['val_epochs']
+    lr_rates_g = checkpoint['lr_rates_g']
+    lr_rates_d = checkpoint['lr_rates_d']
     print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
     val_recon_losses = []
@@ -127,6 +133,9 @@ else:
     epoch_gen_losses = []
     epoch_disc_losses = []
     intermediary_images = []
+    val_epochs = []
+    lr_rates_g = []
+    lr_rates_d = []
 
 perceptual_weight = 0.001
 scaler_g = torch.cuda.amp.GradScaler()
@@ -201,6 +210,7 @@ for epoch in range(start_epoch, n_epochs):
     epoch_disc_losses.append(disc_epoch_loss / (step + 1))
 
     if epoch % val_interval == 0 and epoch > 0:
+        val_epochs.append(epoch)
         autoencoderkl.eval()
         val_loss = 0
         with torch.no_grad():
@@ -216,24 +226,44 @@ for epoch in range(start_epoch, n_epochs):
         val_loss /= val_step
         scheduler_g.step(val_loss)  
         scheduler_d.step(val_loss)
+        lr_g = optimizer_g.param_groups[0]['lr']
+        lr_d = optimizer_d.param_groups[0]['lr']
+        lr_rates_g.append(lr_g)
+        lr_rates_d.append(lr_d)
         val_recon_losses.append(val_loss)
-        # Update the plot after each epoch (or validation interval)
-        plt.figure(figsize=(10, 5))
-        plt.plot(range(epoch + 1), epoch_recon_losses, label='Training Reconstruction Loss')
-        plt.plot(range(0, epoch + 1, val_interval)[:len(val_recon_losses)], val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.legend()
-        plt.title('Learning Curves')
-        plt.savefig('VAE_learning_curves.png')
-        plt.close()
-        print(f"epoch {epoch + 1} val loss: {val_loss:.4f}")
+        
     if epoch % 5 == 0 and epoch > 0:
-        save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, f'vae_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, 
+                            scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, 
+                            intermediary_images, lr_rates_g, lr_rates_d, val_epochs, f'vae_checkpoint_epoch_{epoch}.pth')
         if val_loss < vae_best_val_loss:
             vae_best_val_loss = val_loss
-            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, 'vae_best_checkpoint.pth')
+            save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, 
+                                scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, 
+                                epoch_gen_losses, epoch_disc_losses, intermediary_images, lr_rates_g, lr_rates_d, val_epochs, 'vae_best_checkpoint.pth')
     
+    if epoch > val_interval:
+        fig, ax1 = plt.subplots(figsize=(15, 5))
+
+        ax1.set_xlabel('Epoch')
+        ax1.set_ylabel('Loss', color='tab:blue')
+        ax1.plot(range(epoch + 1), epoch_recon_losses, label='Training Reconstruction Loss', color='tab:blue')
+        ax1.plot(val_epochs, val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed', color='tab:orange')
+        ax1.tick_params(axis='y', labelcolor='tab:blue')
+        ax1.legend(loc='upper left')
+
+        # Create the line that will go on the right y-axis
+        ax2 = ax1.twinx()
+        ax2.set_ylabel('Learning Rate', color='tab:green')
+        ax2.plot(range(epoch + 1), lr_rates_g, label='Generator Learning Rate', linestyle='dotted', color='tab:green')
+        ax2.plot(range(epoch + 1), lr_rates_d, label='Discriminator Learning Rate', linestyle='dotted', color='tab:red')
+        ax2.tick_params(axis='y', labelcolor='tab:green')
+        ax2.legend(loc='upper right')
+
+        fig.tight_layout()
+        plt.title('Learning Curves and Learning Rates')
+        plt.savefig('VAE_learning_curves.png')
+        plt.close()
     
 progress_bar.close()
 
@@ -243,7 +273,6 @@ now = datetime.now()
 date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file naming issues
 # Use date_time string in file name
 torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
-torch.save(discriminator.state_dict(), f'discriminator_weights_{date_time}.pth')
 
 del discriminator
 del perceptual_loss
