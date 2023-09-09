@@ -247,7 +247,7 @@ for epoch in range(start_epoch, n_epochs):
 
         ax1.set_xlabel('Epoch')
         ax1.set_ylabel('Loss', color='tab:blue')
-        ax1.set_xticks(range(epoch + 1))
+        ax1.set_xticks(range(0, epoch + 1, 10))
         ax1.plot(range(epoch + 1), epoch_recon_losses, label='Training Reconstruction Loss', color='tab:blue')
         ax1.plot(val_epochs, val_recon_losses, label='Validation Reconstruction Loss', linestyle='dashed', color='tab:orange')
         ax1.tick_params(axis='y', labelcolor='tab:blue')
