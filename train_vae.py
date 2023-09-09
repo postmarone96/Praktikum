@@ -273,8 +273,9 @@ now = datetime.now()
 # Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")  # I replaced ":" with "M" to avoid file naming issues
 # Use date_time string in file name
-torch.save(autoencoderkl.state_dict(), f'autoencoderkl_weights_{date_time}.pth')
-
+save_checkpoint_vae(epoch, autoencoderkl, discriminator, optimizer_g, optimizer_d, scheduler_d, 
+                            scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, 
+                            intermediary_images, lr_rates_g, lr_rates_d, val_epochs, f'vae_model_{date_time}.pth')
 del discriminator
 del perceptual_loss
 torch.cuda.empty_cache()
