@@ -18,7 +18,7 @@ TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
+AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/auto*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
