@@ -82,8 +82,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=0)#, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=0)#, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -137,7 +137,7 @@ else:
 
 n_epochs = 200
 val_interval = 2
-check_data = first(train_loader)
+check_data = next(iter(train_loader))
 with torch.no_grad():
     with autocast(enabled=True):
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
