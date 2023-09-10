@@ -51,20 +51,22 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
     torch.save(checkpoint, filename)
 
 print_with_timestamp("Defining NiftiDataset class")
-class NiftiZarrDataset(Dataset):
-    def __init__(self, zarr_file):
-        self.zarr_file = zarr_file
-        self.zarr_dataset = zarr.open(self.zarr_file, mode='r')['all_slices']
+class NiftiHDF5Dataset(Dataset):
+    def __init__(self, hdf5_file):
+        self.hdf5_file = hdf5_file
 
     def __len__(self):
-        return self.zarr_dataset.shape[0]
+        with h5py.File(self.hdf5_file, 'r') as f:
+            return len(f['all_slices'])
 
     def __getitem__(self, idx):
-        image_data = self.zarr_dataset[idx]
+        with h5py.File(self.hdf5_file, 'r') as f:
+            image_data = f['all_slices'][idx]
+            image_data = torch.tensor(image_data).unsqueeze(0)
         return image_data
 
 print_with_timestamp("Loading data")
-dataset = NiftiZarrDataset(args.output_file)
+dataset = NiftiHDF5Dataset(args.output_file)
 
 ldm_best_val_loss = float('inf')
 
