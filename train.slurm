@@ -53,7 +53,7 @@ cleanup() {
     echo "Final backup and cleanup..."
     find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
         basefile=$(basename "$file")
-        if [[ "$basefile" == *.png ]]; then
+        if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
         else
             if ! grep -q "$basefile" "$FILEPATH"; then
@@ -85,7 +85,7 @@ if [ ! -e "$DATASET" ]; then
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
-    echo "dataset.zarr copied successfully."
+    echo "dataset.hdf5 copied successfully."
 fi
 
 if [ "$ARG1" = "vae" ]; then
