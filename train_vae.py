@@ -64,7 +64,6 @@ class NiftiZarrDataset(Dataset):
 
     def __getitem__(self, idx):
         image_data = self.zarr_dataset[idx]
-        image_data = torch.tensor(image_data).unsqueeze(0)  # Adding a channel dimension
         return image_data
 
 vae_best_val_loss = float('inf')
