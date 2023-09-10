@@ -13,9 +13,9 @@
 
 echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
-OUTPUTFILE=$SCRATCH_DIR/dataset.zarr
+OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.zarr
+DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
@@ -38,7 +38,7 @@ periodic_backup() {
         sleep 4m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             basefile=$(basename "$file")
-            if [[ "$basefile" == *.png ]]; then
+            if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
             else
                 if ! grep -q "$basefile" "$FILEPATH"; then
