@@ -13,12 +13,12 @@
 
 echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
-OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
+OUTPUTFILE=$SCRATCH_DIR/dataset.zarr
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
+DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.zarr
 AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_best_checkpoint.pth
 LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_best_checkpoint.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/auto*.pth
+AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
@@ -35,7 +35,7 @@ log_and_copy() {
 }
 periodic_backup() {
     while true; do
-        sleep 9m
+        sleep 4m
         find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]]; then
@@ -85,7 +85,7 @@ if [ ! -e "$DATASET" ]; then
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
-    echo "dataset.hdf5 copied successfully."
+    echo "dataset.zarr copied successfully."
 fi
 
 if [ "$ARG1" = "vae" ]; then
