@@ -61,6 +61,7 @@ class NiftiHDF5Dataset(Dataset):
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
+            print(f"Index: {idx}, Dataset Length: {len(f['all_slices'])}")
             image_data = f['all_slices'][idx]
             image_data = torch.tensor(image_data).unsqueeze(0)  # Adding a channel dimension
         return image_data
