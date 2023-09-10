@@ -25,8 +25,6 @@ class NiftiPreprocessor:
             img = nib.load(nii_path)
             total_slices += img.shape[2]  # Assuming images are HxWxD
 
-        print(f"Total slices to process: {total_slices}")
-
         # Buffer to store slices
         buffer = []
 
@@ -52,17 +50,10 @@ class NiftiPreprocessor:
                     slice_count += 1
 
                     # If buffer size reaches 10000, save and clear
-                    if len(buffer) == 10000:
+                    if len(buffer) == 30000:
                         self.save_buffer_to_dataset(dset, buffer)
                         buffer.clear()
                         
-                    print(f"Processed {slice_count}/{total_slices} slices.")
-                    
-                    # Monitor and print RAM usage
-                    process = psutil.Process(os.getpid())
-                    ram_usage = process.memory_info().rss / (1024 ** 3)  # in GB
-                    print(f"Current RAM usage: {ram_usage:.2f} GB")
-
             # If there's any remaining data in the buffer, save it
             if buffer:
                 self.save_buffer_to_dataset(dset, buffer)
@@ -73,3 +64,4 @@ class NiftiPreprocessor:
         dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 preprocessor = NiftiPreprocessor(root_dir=args.data_path, output_file=args.output_file)
 preprocessor.process_and_save()
+
