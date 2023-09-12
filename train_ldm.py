@@ -114,9 +114,9 @@ unet = unet.to(device)
 autoencoderkl = autoencoderkl.to(device).half()
 
 start_epoch = 0
-checkpoint_path = 'ldm_best_checkpoint.pth'
-if os.path.exists(checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
+checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
+if os.path.exists(checkpoint_path[0]):
+    checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
     unet.load_state_dict(checkpoint['unet_state_dict'])
