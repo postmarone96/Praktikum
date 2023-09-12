@@ -1,4 +1,5 @@
 import os
+import glob
 import argparse
 import h5py
 from datetime import datetime
@@ -95,7 +96,7 @@ print_with_timestamp("AutoEncoder setup")
 
 # Before the training loop:
 start_epoch = 0
-checkpoint_path = 'vae_best_checkpoint.pth'
+checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
@@ -109,8 +110,8 @@ autoencoderkl = autoencoderkl.to(device)
 discriminator = discriminator.to(device)
 perceptual_loss= perceptual_loss.to(device)
 
-if os.path.exists(checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
+if os.path.exists(checkpoint_path[0]):
+    checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1  # because we start the next epoch
     autoencoderkl.load_state_dict(checkpoint['autoencoder_state_dict'])
     discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
