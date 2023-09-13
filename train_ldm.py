@@ -103,11 +103,9 @@ scheduler_lr = ReduceLROnPlateau(optimizer, 'min')
 scaler = GradScaler()
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
-#vae_path = glob.glob('vae_model_*.pth')
-vae_path = glob.glob('auto*.pth')
+vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
-autoencoderkl.load_state_dict(vae_model)
-#autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
+autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
 unet = unet.to(device)
@@ -115,7 +113,7 @@ autoencoderkl = autoencoderkl.to(device).half()
 
 start_epoch = 0
 checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
-if os.path.exists(checkpoint_path[0]):
+if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
