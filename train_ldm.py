@@ -99,7 +99,7 @@ unet = DiffusionModelUNet(
     num_head_channels=(0, 256, 512),
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
-scheduler_lr = ReduceLROnPlateau(optimizer, 'min', patience = 40)
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5)
 scaler = GradScaler()
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
