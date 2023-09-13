@@ -101,8 +101,8 @@ autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num
 discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(10**(-float(args.lr)))/2)
-scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min')
-scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min')
+scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min', patience=40)
+scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min', patience=40)
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
