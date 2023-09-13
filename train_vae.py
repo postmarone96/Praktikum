@@ -110,7 +110,7 @@ autoencoderkl = autoencoderkl.to(device)
 discriminator = discriminator.to(device)
 perceptual_loss= perceptual_loss.to(device)
 
-if os.path.exists(checkpoint_path[0]):
+if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1  # because we start the next epoch
     autoencoderkl.load_state_dict(checkpoint['autoencoder_state_dict'])
