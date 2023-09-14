@@ -144,7 +144,7 @@ scaler_d = torch.cuda.amp.GradScaler()
 kl_weight = 1e-6
 n_epochs = 100
 val_interval = 2
-autoencoder_warm_up_n_epochs = 10
+autoencoder_warm_up_n_epochs = -1
 num_example_images = 4
 
 print_with_timestamp("Start setting")
