@@ -24,8 +24,8 @@ FILEPATH="$TARGET_DIR/$FILENAME"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
-mkdir -p $SCRATCH_DIR/C00
-mkdir -p $SCRATCH_DIR/C02
+mkdir -p $SCRATCH_DIR/images
+mkdir -p $SCRATCH_DIR/annotation
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
@@ -38,7 +38,7 @@ log_and_copy() {
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/C00/*" ! -path "$SCRATCH_DIR/C02/*" | while read -r file; do
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/images/*" ! -path "$SCRATCH_DIR/annotation/*" | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -53,7 +53,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/C00/*" ! -path "$SCRATCH_DIR/C02/*" | while read -r file; do
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/images/*" ! -path "$SCRATCH_DIR/annotation/*" | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -83,11 +83,11 @@ BACKUP_PID=$!
 if [ ! -e "$DATASET" ]; then
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | \
     head -n $ARG2 | \
-    xargs -I {} cp {} $SCRATCH_DIR/COO/
+    xargs -I {} cp {} $SCRATCH_DIR/images/
 
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/ -type f | \
     head -n $ARG2 | \
-    xargs -I {} cp {} $SCRATCH_DIR/CO2/
+    xargs -I {} cp {} $SCRATCH_DIR/annotation/
 
     cp $HOME/Praktikum/preprocessing_2_dim.py $SCRATCH_DIR/
     python -u preprocessing_2_dim.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 

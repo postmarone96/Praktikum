@@ -68,8 +68,8 @@ class NiftiPreprocessor:
         dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 
 # Assuming data_path points to a parent directory that contains 'C00' and 'C02' subdirectories
-image_dir = os.path.join(args.data_path, 'C00')
-annotation_dir = os.path.join(args.data_path, 'C02')
+image_dir = os.path.join(args.data_path, 'images')
+annotation_dir = os.path.join(args.data_path, 'annotation')
 
 preprocessor = NiftiPreprocessor(image_dir=image_dir, annotation_dir=annotation_dir, output_file=args.output_file)
 preprocessor.process_and_save()
