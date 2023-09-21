@@ -81,16 +81,13 @@ periodic_backup &
 BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
-    SEED=42
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | \
-    sort -k1,1 -t _ -R --random-source=<(openssl enc -aes-256-ctr -pass pass:"$SEED" -nosalt </dev/zero 2>/dev/null) | \
     head -n $ARG2 | \
     xargs -I {} cp {} $SCRATCH_DIR/COO/
 
     find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/ -type f | \
-    sort -k1,1 -t _ -R --random-source=<(openssl enc -aes-256-ctr -pass pass:"$SEED" -nosalt </dev/zero 2>/dev/null) | \
     head -n $ARG2 | \
-    xargs -I {} cp {} $SCRATCH_DIR/C02/
+    xargs -I {} cp {} $SCRATCH_DIR/CO2/
 
     cp $HOME/Praktikum/preprocessing_2_dim.py $SCRATCH_DIR/
     python -u preprocessing_2_dim.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
