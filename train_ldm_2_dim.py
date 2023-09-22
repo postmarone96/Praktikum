@@ -66,11 +66,11 @@ class NiftiHDF5Dataset(Dataset):
             annotation_data = f['annotation_slices'][idx]
 
         # Convert to PyTorch tensors
-        image_data = torch.tensor(image_data)
-        annotation_data = torch.tensor(annotation_data)
-
+        chann_1 = torch.tensor(image_data)
+        chann_2 = torch.tensor(annotation_data)
+        chann_3 = chann_1
         # Stack the image and annotation along the channel dimension
-        combined = torch.stack([image_data, annotation_data], dim=0)
+        combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
 
         return combined
 
@@ -110,7 +110,7 @@ unet = DiffusionModelUNet(
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
