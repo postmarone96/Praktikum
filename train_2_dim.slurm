@@ -2,8 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=o_%j.txt
-#SBATCH --error=e_%j.txt
+#SBATCH --output=o_2_%j.txt
+#SBATCH --error=e_2_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:1
 #SBATCH --mem=160G
