@@ -69,11 +69,12 @@ class NiftiHDF5Dataset(Dataset):
             annotation_data = f['annotation_slices'][idx]
 
         # Convert to PyTorch tensors
-        image_data = torch.tensor(image_data)
-        annotation_data = torch.tensor(annotation_data)
+        chann_1 = torch.tensor(image_data)
+        chann_2 = torch.tensor(annotation_data)
+        chann_3 = chann_1
 
         # Stack the image and annotation along the channel dimension
-        combined = torch.stack([image_data, annotation_data], dim=0)
+        combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
 
         return combined
 
