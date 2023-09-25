@@ -100,8 +100,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
+    in_channels=9,
+    out_channels=9,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -110,7 +110,7 @@ unet = DiffusionModelUNet(
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=9, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
