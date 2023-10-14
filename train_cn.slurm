@@ -85,14 +85,14 @@ BACKUP_PID=$!
     # find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | \
     # head -n $(($ARG2 -17))| \
     # xargs -I {} cp {} $SCRATCH_DIR/bg/
-cp "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg/" $SCRATCH_DIR/bg/
+cp -r "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg/" $SCRATCH_DIR/bg/
 
 # find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/ -type f | \
 # head -n $(($ARG2 - 17)) | \
 # xargs -I {} cp {} $SCRATCH_DIR/raw/
-cp "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw/" $SCRATCH_DIR/raw/
+cp -r "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw/" $SCRATCH_DIR/raw/
 
-cp "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/gt/" $SCRATCH_DIR/gt/
+cp -r "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/gt/" $SCRATCH_DIR/gt/
 
 cp $HOME/Praktikum/preprocessing_cn.py $SCRATCH_DIR/
 python -u preprocessing_cn.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
