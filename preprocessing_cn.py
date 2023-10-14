@@ -75,10 +75,8 @@ class NiftiPreprocessor:
         dataset.resize((current_length + len(buffer), 256, 256))
         dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 
-# Assuming data_path points to a parent directory that contains 'C00' and 'C02' subdirectories 
-raw_dir = os.path.join(args.data_path, 'raw')
-bg_dir = os.path.join(args.data_path, 'bg')
-gt_dir = os.path.join(args.data_path, 'gt')
-
-preprocessor = NiftiPreprocessor(raw_dir=raw_dir, bg_dir=bg_dir, gt_dir=gt_dir, output_file=args.output_file)
+preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
+                                bg_dir=os.path.join(args.data_path, 'bg'),
+                                gt_dir=os.path.join(args.data_path, 'gt'), 
+                                output_file=args.output_file)
 preprocessor.process_and_save()

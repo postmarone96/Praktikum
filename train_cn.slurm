@@ -24,9 +24,6 @@ FILEPATH="$TARGET_DIR/$FILENAME"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
-mkdir -p $SCRATCH_DIR/bg
-mkdir -p $SCRATCH_DIR/raw
-mkdir -p $SCRATCH_DIR/gt
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
@@ -81,26 +78,14 @@ echo "env activated"
 periodic_backup &
 BACKUP_PID=$!
 
-# if [ ! -e "$DATASET" ]; then
-    # find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | \
-    # head -n $(($ARG2 -17))| \
-    # xargs -I {} cp {} $SCRATCH_DIR/bg/
-# cp -r "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg/" $SCRATCH_DIR/bg/
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/bg/ $SCRATCH_DIR/bg/
-# find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/ -type f | \
-# head -n $(($ARG2 - 17)) | \
-# xargs -I {} cp {} $SCRATCH_DIR/raw/
-#cp -r "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw/" $SCRATCH_DIR/raw/
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/raw/ $SCRATCH_DIR/raw/
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/gt/ $SCRATCH_DIR/gt/
+cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/bg $SCRATCH_DIR/
+cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/raw $SCRATCH_DIR/
+cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/gt $SCRATCH_DIR/
 
 cp $HOME/Praktikum/preprocessing_cn.py $SCRATCH_DIR/
 python -u preprocessing_cn.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
 echo "preprocessing completed"
-# elif  [ -e "$DATASET" ]; then
-#    cp $DATASET $SCRATCH_DIR/
-#    echo "dataset.hdf5 copied successfully."
-#fi
+
 
 echo "training vae"
 if [ -e "$CN_CHECKPOINT" ]; then
