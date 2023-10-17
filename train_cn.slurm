@@ -12,20 +12,19 @@
 #SBATCH --qos=gpu_normal
 
 echo "directory definition"
-SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
-OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
-TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
-CN_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/cn_checkpoint_epoch_$ARG5.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
-LDM=$HOME/Praktikum/train_$ARG2/job_$ARG4/ldm_model_*.pth
-FILENAME=$(date "+%Y%m%d.txt")
+SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
+OUTPUTFILE="$SCRATCH_DIR/dataset.hdf5"
+TARGET_DIR="$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID"
+DATASET="$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5"
+CN_CHECKPOINT="$HOME/Praktikum/train_$ARG2/job_$ARG4/cn_checkpoint_epoch_$ARG5.pth"
+LDM="$HOME/Praktikum/train_$ARG2/job_$ARG4/ldm_model_*.pth"
+FILENAME="$(date "+%Y%m%d.txt")"
 FILEPATH="$TARGET_DIR/$FILENAME"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
 mkdir -p $TARGET_DIR
-touch $FILEPATH
+touch "$FILEPATH"
 
 log_and_copy() {
     local src=$1
@@ -78,16 +77,17 @@ echo "env activated"
 periodic_backup &
 BACKUP_PID=$!
 
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/bg $SCRATCH_DIR/
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/raw $SCRATCH_DIR/
-cp -r /lustre/groups/iterm/Annotated_Datasets/Annotated\ Datasets/UCHL1\ HFD\ -\ Peripheral\ Nervous\ System\ instance/gt $SCRATCH_DIR/
+# Copy files to scratch directory
+SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
+cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/"
+cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/"
+cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/"
 
 cp $HOME/Praktikum/preprocessing_cn.py $SCRATCH_DIR/
 python -u preprocessing_cn.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
 echo "preprocessing completed"
 
-
-echo "training vae"
+echo "training ControlNet"
 if [ -e "$CN_CHECKPOINT" ]; then
     cp $CN_CHECKPOINT $SCRATCH_DIR/
     echo "cn_checkpoint copied successfully."

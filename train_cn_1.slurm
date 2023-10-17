@@ -58,12 +58,8 @@ cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/"
 cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/"
 cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/"
 
-# Print the contents of bg, raw, and gt directories
-echo "Contents of the bg directory:"
-ls "$SCRATCH_DIR/bg"
-echo "Contents of the raw directory:"
-ls "$SCRATCH_DIR/raw"
-echo "Contents of the gt directory:"
-ls "$SCRATCH_DIR/gt"
+
+
+
 
 cleanup
