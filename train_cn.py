@@ -74,7 +74,7 @@ class NiftiHDF5Dataset(Dataset):
         # Stack the image and annotation along the channel dimension
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2, chann_3], dim=0)
-        combined['gt'] = torch.tensor(gt)
+        combined['gt'] = torch.tensor(gt).unsqueeze(0)
 
         return combined
 
