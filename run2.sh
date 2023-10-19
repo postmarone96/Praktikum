@@ -17,9 +17,7 @@ export ARG5
 export ARG6
 
 test -d train_${ARG2} || mkdir train_${ARG2}
-
 cp -f train_2_dim.slurm train_${ARG2}/
-
 cd train_${ARG2}
 
 # Submit the SLURM job
