@@ -22,22 +22,10 @@ echo "Creating the directories"
 mkdir -p "$SCRATCH_DIR"
 mkdir -p "$TARGET_DIR"
 
-log_and_copy() {
-    local src=$1
-    local dest=$2
-    cp "$src" "$dest"
-}
-
-cleanup() {
-    echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.pth" \) | while read -r file; do
-        log_and_copy "$file" "$TARGET_DIR"
-    done
-    rm -rf "$SCRATCH_DIR"
-    echo "Cleanup complete."
-}
-
-trap 'cleanup' SIGTERM
+# Copy files to scratch directory
+cp -r "$SLURM_SUBMIT_DIR/job_$ARG2/vae_model*.pth" "$SCRATCH_DIR/"
+cp -r "$SLURM_SUBMIT_DIR/job_$ARG2/ldm_model*.pth" "$SCRATCH_DIR/"
+cp -r "$HOME/Praktikum/get_diff_samples.py" $SCRATCH_DIR/
 
 # Move to the local scratch directory
 echo "Changing to local scratch directory"
@@ -48,11 +36,12 @@ eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "Environment activated"
 
-# Copy files to scratch directory
-cp -r "$HOME/Praktikum/train_$ARG1/job_$ARG2/vae_model*.pth" "$SCRATCH_DIR/"
-cp -r "$HOME/Praktikum/train_$ARG1/job_$ARG2/ldm_model*.pth" "$SCRATCH_DIR/"
-cp -r "$HOME/Praktikum/get_diff_samples.py" $SCRATCH_DIR/
-
+#start the python script
 python -u get_diff_samples.py
 
-cleanup
+cp -r "$SCRATCH_DIR/*.svg" "$TARGET_DIR/"
+cp -r "$SCRATCH_DIR/diff_raw" "$TARGET_DIR/"
+cp -r "$SCRATCH_DIR/diff_bg" "$TARGET_DIR/"
+
+rm -rf "$SCRATCH_DIR"
+
