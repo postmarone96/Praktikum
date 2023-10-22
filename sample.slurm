@@ -23,8 +23,8 @@ mkdir -p "$SCRATCH_DIR"
 mkdir -p "$TARGET_DIR"
 
 # Copy files to scratch directory
-cp -r "$SLURM_SUBMIT_DIR/job_$ARG2/vae_model*.pth" "$SCRATCH_DIR/"
-cp -r "$SLURM_SUBMIT_DIR/job_$ARG2/ldm_model*.pth" "$SCRATCH_DIR/"
+cp -r $SLURM_SUBMIT_DIR/job_$ARG2/vae_model*.pth "$SCRATCH_DIR/"
+cp -r $SLURM_SUBMIT_DIR/job_$ARG2/ldm_model*.pth "$SCRATCH_DIR/"
 cp -r "$HOME/Praktikum/get_diff_samples.py" $SCRATCH_DIR/
 
 # Move to the local scratch directory
@@ -39,7 +39,7 @@ echo "Environment activated"
 #start the python script
 python -u get_diff_samples.py
 
-cp -r "$SCRATCH_DIR/*.svg" "$TARGET_DIR/"
+cp -r $SCRATCH_DIR/*.svg "$TARGET_DIR/"
 cp -r "$SCRATCH_DIR/diff_raw" "$TARGET_DIR/"
 cp -r "$SCRATCH_DIR/diff_bg" "$TARGET_DIR/"
 
