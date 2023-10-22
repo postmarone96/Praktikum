@@ -23,7 +23,7 @@ unet = DiffusionModelUNet(
     num_head_channels=(0, 256, 512),
 )
 scaler = GradScaler()
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae*.pth')
 vae_model = torch.load(vae_path[0])
 autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
