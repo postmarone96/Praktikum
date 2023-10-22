@@ -2,7 +2,7 @@
 
 # Collect arguments or set defaults
 ARG1=${1:-0}
-ARG2=${1:-0}
+ARG2=${2:-0}
 
 # Export them as environment variables so they can be accessed within the SLURM script
 export ARG1
