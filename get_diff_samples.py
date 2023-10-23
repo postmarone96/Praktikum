@@ -104,5 +104,5 @@ for channel_list, folder_name, file_prefix in channels_data:
         
         # Save the image in SVG format without any frame
         filename = f'{folder_name}/{file_prefix}{i}.png'
-        plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0)
+        plt.savefig(filename, dpi=300, bbox_inches='tight', pad_inches=0)
         plt.close()
