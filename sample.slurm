@@ -39,7 +39,7 @@ echo "Environment activated"
 #start the python script
 python -u get_diff_samples.py
 
-cp -r $SCRATCH_DIR/*.svg "$TARGET_DIR/"
+cp -r $SCRATCH_DIR/*.png "$TARGET_DIR/"
 cp -r "$SCRATCH_DIR/diff_raw" "$TARGET_DIR/"
 cp -r "$SCRATCH_DIR/diff_bg" "$TARGET_DIR/"
 
