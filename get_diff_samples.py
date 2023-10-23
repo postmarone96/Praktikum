@@ -63,7 +63,7 @@ noise_np = noise[0, 0].cpu().numpy()
 plt.figure(figsize=(5,5))
 plt.imshow(noise_np, cmap='jet')
 plt.axis('off')
-plt.savefig("noise_image.png", format='png', bbox_inches='tight', pad_inches=0)
+plt.savefig("noise_image.png", dpi=300 , bbox_inches='tight', pad_inches=0)
 plt.close()
 
 noise = noise.to(device)

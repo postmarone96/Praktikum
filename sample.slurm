@@ -39,9 +39,11 @@ echo "Environment activated"
 #start the python script
 python -u get_diff_samples.py
 
-cp -r $SCRATCH_DIR/*.png "$TARGET_DIR/"
-cp -r "$SCRATCH_DIR/diff_raw" "$TARGET_DIR/"
-cp -r "$SCRATCH_DIR/diff_bg" "$TARGET_DIR/"
+zip "$SCRATCH_DIR/png_files.zip" "$SCRATCH_DIR"/*.png
+zip -r "$SCRATCH_DIR/png_files.zip" "$SCRATCH_DIR/diff_raw"
+zip -r "$SCRATCH_DIR/png_files.zip" "$SCRATCH_DIR/diff_bg"
+
+mv "$SCRATCH_DIR/png_files.zip" "$TARGET_DIR/"
 
 rm -rf "$SCRATCH_DIR"
 
