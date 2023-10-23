@@ -63,7 +63,7 @@ noise_np = noise[0, 0].cpu().numpy()
 plt.figure(figsize=(5,5))
 plt.imshow(noise_np, cmap='jet')
 plt.axis('off')
-plt.savefig("noise_image.svg", format='svg', bbox_inches='tight', pad_inches=0)
+plt.savefig("noise_image.png", format='png', bbox_inches='tight', pad_inches=0)
 plt.close()
 
 noise = noise.to(device)
@@ -103,6 +103,6 @@ for channel_list, folder_name, file_prefix in channels_data:
         ax.imshow(colored_image_rgb)
         
         # Save the image in SVG format without any frame
-        filename = f'{folder_name}/{file_prefix}{i}.svg'
-        plt.savefig(filename, format='svg', bbox_inches='tight', pad_inches=0)
+        filename = f'{folder_name}/{file_prefix}{i}.png'
+        plt.savefig(filename, format='png', bbox_inches='tight', pad_inches=0)
         plt.close()
