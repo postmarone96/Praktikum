@@ -82,8 +82,9 @@ SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - 
 cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/"
 cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/"
 cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/"
-
+cp $LDM $SCRATCH_DIR/
 cp $HOME/Praktikum/preprocessing_cn.py $SCRATCH_DIR/
+
 python -u preprocessing_cn.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
 echo "preprocessing completed"
 
