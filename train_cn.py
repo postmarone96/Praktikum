@@ -124,10 +124,10 @@ unet = unet.to(device)
 controlnet = ControlNet(
     spatial_dims=2,
     in_channels=3,
-    num_channels=(128, 256, 256),
+    num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
-    num_res_blocks=1,
-    num_head_channels=256,
+    num_res_blocks=2,
+    num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16,),
 )
 # Copy weights from the DM to the controlnet
