@@ -137,7 +137,7 @@ controlnet = controlnet.to(device)
 # Now, we freeze the parameters of the diffusion model.
 for p in unet.parameters():
     p.requires_grad = False
-optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=2.5e-5) #10**(-float(args.lr))
+optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=2.5*10**(-float(args.lr)))
 
 start_epoch = 0
 checkpoint_path = glob.glob('cn_checkpoint_epoch_*.pth')
