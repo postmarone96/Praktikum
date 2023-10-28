@@ -95,8 +95,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=5, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=5, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=3, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=3, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -126,8 +126,8 @@ controlnet = ControlNet(
     in_channels=3,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
-    num_res_blocks=1,
-    num_head_channels=128,
+    num_res_blocks=2,
+    num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16,),
 )
 # Copy weights from the DM to the controlnet
