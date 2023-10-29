@@ -94,7 +94,6 @@ if [ -e "$CN_CHECKPOINT" ]; then
     echo "cn_checkpoint copied successfully."
 fi 
 
-cp $AE $SCRATCH_DIR/
 cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
 python -u train_cn.py --output_file $OUTPUTFILE --lr $ARG3
 
