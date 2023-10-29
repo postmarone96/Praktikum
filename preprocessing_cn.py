@@ -71,18 +71,18 @@ class NiftiPreprocessor:
         return buffer
     
     def process_single_nifti_for_masks(self, nii_path):
-    img = nib.load(nii_path)
-    image_data = img.get_fdata()
-    image_data = np.moveaxis(image_data, -1, 0)
-    image_data = image_data.astype(np.float32)
-    buffer = []
-    for img in image_data:
-        max_value = np.max(img)
-        img /= max_value
-        img_cropped = img[0:256, 0:256]
-        img_cropped = (img_cropped > 0.5).astype(np.float32)
-        buffer.append(img_cropped)
-    return buffer
+        img = nib.load(nii_path)
+        image_data = img.get_fdata()
+        image_data = np.moveaxis(image_data, -1, 0)
+        image_data = image_data.astype(np.float32)
+        buffer = []
+        for img in image_data:
+            max_value = np.max(img)
+            img /= max_value
+            img_cropped = img[0:256, 0:256]
+            img_cropped = (img_cropped > 0.5).astype(np.float32)
+            buffer.append(img_cropped)
+        return buffer
 
     def save_buffer_to_dataset(self, dataset, buffer):
         current_length = dataset.shape[0]
