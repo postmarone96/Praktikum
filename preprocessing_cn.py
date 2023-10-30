@@ -38,7 +38,7 @@ class NiftiPreprocessor:
                 # Handle bg
                 buffer_bg.extend(self.process_single_nifti(bg_path))
                 # Handle gt
-                buffer_gt.extend(self.process_single_nifti(gt_path))
+                buffer_gt.extend(self.process_single_nifti_for_masks(gt_path))
 
                 # Save buffer if it's big enough
                 if len(buffer_raw) >= 30000:
@@ -55,7 +55,7 @@ class NiftiPreprocessor:
             if buffer_bg:
                 self.save_buffer_to_dataset(dset_bg, buffer_bg)
             if buffer_gt:
-                self.process_single_nifti_for_masks(dset_gt, buffer_gt)
+                self.save_buffer_to_dataset(dset_gt, buffer_gt)
 
     def process_single_nifti(self, nii_path):
         img = nib.load(nii_path)
