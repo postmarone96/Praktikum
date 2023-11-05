@@ -5,7 +5,7 @@
 #SBATCH --output=o_2_%j.txt
 #SBATCH --error=e_2_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
@@ -21,11 +21,12 @@ LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_checkpoint_epoch_$ARG6.
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
+IDS_FILE="$HOME/Praktikum/ids.txt"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
-mkdir -p $SCRATCH_DIR/images
-mkdir -p $SCRATCH_DIR/annotation
+mkdir -p $SCRATCH_DIR/bg
+mkdir -p $SCRATCH_DIR/raw
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
@@ -38,7 +39,7 @@ log_and_copy() {
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/images/*" ! -path "$SCRATCH_DIR/annotation/*" | while read -r file; do
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -53,7 +54,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/images/*" ! -path "$SCRATCH_DIR/annotation/*" | while read -r file; do
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -81,13 +82,13 @@ periodic_backup &
 BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
-    find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | \
-    head -n $ARG2 | \
-    xargs -I {} cp {} $SCRATCH_DIR/images/
+    while IFS= read -r id; do
+        find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/bg/"
+    done < "$IDS_FILE"
 
-    find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/ -type f | \
-    head -n $ARG2 | \
-    xargs -I {} cp {} $SCRATCH_DIR/annotation/
+    while IFS= read -r id; do
+        find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/raw/"
+    done < "$IDS_FILE"
 
     cp $HOME/Praktikum/preprocessing_2_dim.py $SCRATCH_DIR/
     python -u preprocessing_2_dim.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 

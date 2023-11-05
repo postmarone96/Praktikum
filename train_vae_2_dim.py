@@ -36,8 +36,8 @@ print_with_timestamp("Starting the script")
 def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, lr_rates_g, lr_rates_d, val_epochs, filename):
     checkpoint = {
         'epoch': epoch,
-        'autoencoder_state_dict': autoencoder_model.state_dict(),
-        'discriminator_state_dict': discriminator_model.state_dict(),
+        'autoencoder_state_dict': autoencoder_model.module.state_dict(),
+        'discriminator_state_dict': discriminator_model.module.state_dict(),
         'optimizer_g_state_dict': optimizer_g.state_dict(),
         'optimizer_d_state_dict': optimizer_d.state_dict(),
         'scheduler_d_state_dict': scheduler_d.state_dict(),
@@ -61,20 +61,20 @@ class NiftiHDF5Dataset(Dataset):
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
             # Assuming image_slices and annotation_slices have the same length
-            return len(f['image_slices'])
+            return len(f['bg'])
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            image_data = f['image_slices'][idx]
-            annotation_data = f['annotation_slices'][idx]
+            bg_data = f['bg'][idx]
+            raw_data = f['raw'][idx]
 
         # Convert to PyTorch tensors
-        chann_1 = torch.tensor(image_data)
-        chann_2 = torch.tensor(annotation_data)
-        chann_3 = chann_1
+        chann_1 = torch.tensor(raw_data)
+        chann_2 = torch.tensor(bg_data)
+        # chann_3 = chann_1
 
         # Stack the image and annotation along the channel dimension
-        combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
+        combined = torch.stack([chann_1, chann_2], dim=0)
 
         return combined
 
@@ -96,8 +96,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=20, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=20, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -107,8 +107,8 @@ print_with_timestamp("AutoEncoder setup")
 # Before the training loop:
 start_epoch = 0
 checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=3, out_channels=3)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=2, out_channels=2)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(10**(-float(args.lr)))/2)
 scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min', factor=0.5, patience=20)
@@ -116,6 +116,8 @@ scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min', fac
 adv_loss = PatchAdversarialLoss(criterion="least_squares")
 adv_weight = 0.01
 perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
+autoencoderkl = torch.nn.DataParallel(autoencoderkl)
+discriminator = torch.nn.DataParallel(discriminator)
 autoencoderkl = autoencoderkl.to(device)
 discriminator = discriminator.to(device)
 perceptual_loss= perceptual_loss.to(device)
@@ -123,8 +125,8 @@ perceptual_loss= perceptual_loss.to(device)
 if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1  # because we start the next epoch
-    autoencoderkl.load_state_dict(checkpoint['autoencoder_state_dict'])
-    discriminator.load_state_dict(checkpoint['discriminator_state_dict'])
+    autoencoderkl.module.load_state_dict(checkpoint['autoencoder_state_dict'])
+    discriminator.module.load_state_dict(checkpoint['discriminator_state_dict'])
     optimizer_g.load_state_dict(checkpoint['optimizer_g_state_dict'])
     optimizer_d.load_state_dict(checkpoint['optimizer_d_state_dict'])
     scheduler_d.load_state_dict(checkpoint['optimizer_d_state_dict'])
@@ -174,7 +176,12 @@ for epoch in range(start_epoch, n_epochs):
             reconstruction, z_mu, z_sigma = autoencoderkl(images)
 
             recons_loss = F.l1_loss(reconstruction.float(), images.float())
-            p_loss = perceptual_loss(reconstruction.float(), images.float())
+            if reconstruction.size(1) == 2:
+                p_loss_1 = perceptual_loss(reconstruction[:, 0, :, :].unsqueeze(1).float(), images[:, 0, :, :].unsqueeze(1).float())
+                p_loss_2 = perceptual_loss(reconstruction[:, 1, :, :].unsqueeze(1).float(), images[:, 1, :, :].unsqueeze(1).float())
+                p_loss = (p_loss_1 + p_loss_2) / 2
+            else :
+                p_loss = perceptual_loss(reconstruction.float(), images.float())
             kl_loss = 0.5 * torch.sum(z_mu.pow(2) + z_sigma.pow(2) - torch.log(z_sigma.pow(2)) - 1, dim=[1, 2, 3])
             kl_loss = torch.sum(kl_loss) / kl_loss.shape[0]
             loss_g = recons_loss + (kl_weight * kl_loss) + (perceptual_weight * p_loss)

@@ -12,42 +12,42 @@ parser.add_argument("--output_file", type=str, required=True)
 args = parser.parse_args()
 
 class NiftiPreprocessor:
-    def __init__(self, image_dir, annotation_dir, output_file):
-        self.image_dir = image_dir
-        self.annotation_dir = annotation_dir
-        self.image_files = sorted([os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith('.nii.gz')])
-        self.annotation_files = sorted([os.path.join(annotation_dir, f) for f in os.listdir(annotation_dir) if f.endswith('.nii.gz')])
+    def __init__(self, bg_dir, raw_dir, output_file):
+        self.bg_dir = bg_dir
+        self.raw_dir = raw_dir
+        self.bg_files = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
+        self.raw_files = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
         self.output_file = output_file
 
     def process_and_save(self):
         # Assuming equal number of image and annotation files
-        assert len(self.image_files) == len(self.annotation_files), "Mismatch in number of image and annotation files"
+        assert len(self.bg_files) == len(self.raw_files), "Mismatch in number of image and annotation files"
 
-        buffer_image = []
-        buffer_annotation = []
+        buffer_bg = []
+        buffer_raw = []
 
         with h5py.File(self.output_file, 'w') as f:
-            dset_image = f.create_dataset('image_slices', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
-            dset_annotation = f.create_dataset('annotation_slices', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            dset_bg = f.create_dataset('raw', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            dset_raw = f.create_dataset('bg', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
-            for image_path, annotation_path in zip(self.image_files, self.annotation_files):
+            for bg_path, raw_path in zip(self.bg_files, self.raw_files):
                 # Handle image
-                buffer_image.extend(self.process_single_nifti(image_path))
+                buffer_bg.extend(self.process_single_nifti(bg_path))
                 # Handle annotation
-                buffer_annotation.extend(self.process_single_nifti(annotation_path))
+                buffer_raw.extend(self.process_single_nifti(raw_path))
 
                 # Save buffer if it's big enough
-                if len(buffer_image) >= 30000:
-                    self.save_buffer_to_dataset(dset_image, buffer_image)
-                    self.save_buffer_to_dataset(dset_annotation, buffer_annotation)
-                    buffer_image.clear()
-                    buffer_annotation.clear()
+                if len(buffer_bg) >= 30000:
+                    self.save_buffer_to_dataset(dset_bg, buffer_bg)
+                    self.save_buffer_to_dataset(dset_raw, buffer_raw)
+                    buffer_bg.clear()
+                    buffer_raw.clear()
 
             # If there's any remaining data in the buffers, save them
-            if buffer_image:
-                self.save_buffer_to_dataset(dset_image, buffer_image)
-            if buffer_annotation:
-                self.save_buffer_to_dataset(dset_annotation, buffer_annotation)
+            if buffer_bg:
+                self.save_buffer_to_dataset(dset_bg, buffer_bg)
+            if buffer_raw:
+                self.save_buffer_to_dataset(dset_raw, buffer_raw)
 
     def process_single_nifti(self, nii_path):
         img = nib.load(nii_path)
@@ -68,8 +68,8 @@ class NiftiPreprocessor:
         dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 
 # Assuming data_path points to a parent directory that contains 'C00' and 'C02' subdirectories
-image_dir = os.path.join(args.data_path, 'images')
-annotation_dir = os.path.join(args.data_path, 'annotation')
+bg_dir = os.path.join(args.data_path, 'bg')
+raw_dir = os.path.join(args.data_path, 'raw')
 
-preprocessor = NiftiPreprocessor(image_dir=image_dir, annotation_dir=annotation_dir, output_file=args.output_file)
+preprocessor = NiftiPreprocessor(bg_dir=bg_dir, raw_dir=raw_dir, output_file=args.output_file)
 preprocessor.process_and_save()
