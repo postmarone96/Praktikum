@@ -37,7 +37,7 @@ print_with_timestamp("Starting the script")
 def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, filename):
     checkpoint = {
         'epoch': epoch,
-        'unet_state_dict': unet.state_dict(),
+        'unet_state_dict': unet.module.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
@@ -91,8 +91,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=15, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=15, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -110,15 +110,18 @@ unet = DiffusionModelUNet(
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
-autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
+autoencoderkl.module.load_state_dict(vae_model['autoencoder_state_dict'])
+autoencoderkl = autoencoderkl.to(device).half()
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
+unet = torch.nn.DataParallel(unet)
 unet = unet.to(device)
-autoencoderkl = autoencoderkl.to(device).half()
+
 
 start_epoch = 0
 checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
@@ -126,7 +129,7 @@ if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
-    unet.load_state_dict(checkpoint['unet_state_dict'])
+    unet.module.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
