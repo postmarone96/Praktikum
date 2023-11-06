@@ -151,7 +151,7 @@ val_interval = 2
 check_data = next(iter(train_loader))
 with torch.no_grad():
     with autocast(enabled=True):
-        z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
+        z = autoencoderkl.module.encode_stage_2_inputs(check_data.to(device))
 print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
 
@@ -193,8 +193,8 @@ for epoch in range(start_epoch, n_epochs):
                 images = batch.to(device)
 
                 with autocast(enabled=True):
-                    z_mu, z_sigma = autoencoderkl.encode(images)
-                    z = autoencoderkl.sampling(z_mu, z_sigma)
+                    z_mu, z_sigma = autoencoderkl.module.encode(images)
+                    z = autoencoderkl.module.sampling(z_mu, z_sigma)
                     noise = torch.randn_like(z).to(device)
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
