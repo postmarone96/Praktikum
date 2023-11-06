@@ -2,7 +2,7 @@
 
 # Collect arguments or set defaults
 ARG1=${1:-""}
-ARG2=${2:-0}
+ARG2=${2:-""}
 ARG3=${3:-0}
 ARG4=${4:-0}
 ARG5=${5:-0}

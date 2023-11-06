@@ -82,13 +82,21 @@ periodic_backup &
 BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
-    while IFS= read -r id; do
-        find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/bg/"
-    done < "$IDS_FILE"
+    if [ "$ARG2" = 'xl' ]; then
+        while IFS= read -r id; do
+            find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/bg/"
+        done < "$IDS_FILE"
 
-    while IFS= read -r id; do
-        find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/raw/"
-    done < "$IDS_FILE"
+        while IFS= read -r id; do
+            find "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/" -type f -name "*${id}.nii" -exec cp {} "$SCRATCH_DIR/raw/"
+        done < "$IDS_FILE"
+
+    elif [ "$ARG2" = 'xs' ]; then
+        SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
+        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/"
+        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/"
+        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/"
+    fi
 
     cp $HOME/Praktikum/preprocessing_2_dim.py $SCRATCH_DIR/
     python -u preprocessing_2_dim.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
