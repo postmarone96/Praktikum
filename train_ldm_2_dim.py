@@ -58,19 +58,20 @@ class NiftiHDF5Dataset(Dataset):
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
             # Assuming image_slices and annotation_slices have the same length
-            return len(f['image_slices'])
+            return len(f['bg'])
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            image_data = f['image_slices'][idx]
-            annotation_data = f['annotation_slices'][idx]
+            bg_data = f['bg'][idx]
+            raw_data = f['raw'][idx]
 
         # Convert to PyTorch tensors
-        chann_1 = torch.tensor(image_data)
-        chann_2 = torch.tensor(annotation_data)
-        chann_3 = chann_1
+        chann_1 = torch.tensor(raw_data)
+        chann_2 = torch.tensor(bg_data)
+        # chann_3 = chann_1
+
         # Stack the image and annotation along the channel dimension
-        combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
+        combined = torch.stack([chann_1, chann_2], dim=0)
 
         return combined
 
@@ -100,8 +101,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
+    in_channels=2,
+    out_channels=2,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -111,7 +112,7 @@ optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
 
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
