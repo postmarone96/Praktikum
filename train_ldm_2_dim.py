@@ -113,6 +113,7 @@ scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
 
 autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 autoencoderkl.module.load_state_dict(vae_model['autoencoder_state_dict'])
@@ -166,8 +167,8 @@ for epoch in range(start_epoch, n_epochs):
         images = batch.to(device)
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
-            z_mu, z_sigma = autoencoderkl.encode(images)
-            z = autoencoderkl.sampling(z_mu, z_sigma)
+            z_mu, z_sigma = autoencoderkl.module.encode(images)
+            z = autoencoderkl.module.sampling(z_mu, z_sigma)
             noise = torch.randn_like(z).to(device)
             timesteps = torch.randint(0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device).long()
             noise_pred = inferer(
