@@ -11,6 +11,8 @@
 #SBATCH --nice=1000
 #SBATCH --qos=gpu_normal
 
+IDS_FILE="$HOME/Praktikum/ids.txt"
+
 mkdir -p $HOME/Praktikum/train_xl/data/bg/
 mkdir -p $HOME/Praktikum/train_xl/data/raw/
 
