@@ -14,6 +14,7 @@ args = parser.parse_args()
 
 class NiftiPreprocessor:
     def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
+        self.data_size = data_size
         self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
         self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
         if self.data_size == 'xs':
