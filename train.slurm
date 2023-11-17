@@ -29,7 +29,8 @@ echo "Create the directories"
 mkdir -p $SCRATCH_DIR
 mkdir -p $SCRATCH_DIR/bg
 mkdir -p $SCRATCH_DIR/raw
-mkdir -p $TARGET_DIR/gt
+mkdir -p $SCRATCH_DIR/gt
+mkdir -p $TARGET_DIR
 touch $FILEPATH
 
 log_and_copy() {
