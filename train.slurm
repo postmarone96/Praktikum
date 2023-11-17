@@ -2,10 +2,10 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=o_%j.txt
-#SBATCH --error=e_%j.txt
+#SBATCH --output=o_2_%j.txt
+#SBATCH --error=e_2_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
@@ -15,16 +15,21 @@ echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$ARG2/job_$ARG4/dataset.hdf5
-AE_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_checkpoint_epoch_$ARG6.pth
-LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_checkpoint_epoch_$ARG6.pth
-AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
+DATASET=$HOME/Praktikum/train_$SIZE/job_$JVAE/dataset.hdf5
+AE_CHECKPOINT=$HOME/Praktikum/train_$SIZE/job_$JVAE/vae_checkpoint_epoch_$CP.pth
+LDM_CHECKPOINT=$HOME/Praktikum/train_$SIZE/job_$JLDM/ldm_checkpoint_epoch_$CP.pth
+CN_CHECKPOINT="$HOME/Praktikum/train_$SIZE/job_$JCN/cn_checkpoint_epoch_$CP.pth"
+AE=$HOME/Praktikum/train_$SIZE/job_$JVAE/vae_model_*.pth
+LDM="$HOME/Praktikum/train_$SIZE/job_$JLDM/ldm_model_*.pth"
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
+IDS_FILE="$HOME/Praktikum/ids.txt"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
-mkdir -p $TARGET_DIR
+mkdir -p $SCRATCH_DIR/bg
+mkdir -p $SCRATCH_DIR/raw
+mkdir -p $TARGET_DIR/gt
 touch $FILEPATH
 
 log_and_copy() {
@@ -36,7 +41,7 @@ log_and_copy() {
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -51,7 +56,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -79,24 +84,40 @@ periodic_backup &
 BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
-    find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
+    if [ "$SIZE" = 'xl' ]; then
+        while IFS= read -r id; do
+            cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00"/${id} "$SCRATCH_DIR/bg/"
+        done < "$IDS_FILE"
+
+        while IFS= read -r id; do
+            cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02"/${id} "$SCRATCH_DIR/raw/"
+        done < "$IDS_FILE"
+
+    elif [ "$SIZE" = 'xs' ]; then
+        SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
+        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/bg"
+        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/raw"
+        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/gt"
+    fi
+
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
 
-if [ "$ARG1" = "vae" ]; then
+if [ "$MODEL" = "vae" ]; then
     echo "training vae"
     if [ -e "$AE_CHECKPOINT" ]; then
         cp $AE_CHECKPOINT $SCRATCH_DIR/
-        echo "ae_checkpoint copied successfully."
+        echo "vae_checkpoint copied successfully."
     fi 
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --output_file $OUTPUTFILE --lr $ARG3
-elif [ "$ARG1" = "ldm" ]; then
+    python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
+
+elif [ "$MODEL" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
         cp $LDM_CHECKPOINT $SCRATCH_DIR/
@@ -104,7 +125,17 @@ elif [ "$ARG1" = "ldm" ]; then
     fi 
     cp $AE $SCRATCH_DIR/
     cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
-    python -u train_ldm.py --output_file $OUTPUTFILE --lr $ARG3
+    python -u train_ldm.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE --job $SLURM_JOB_ID
+
+elif [ "$MODEL" = "cn" ]; then
+    echo "training cn"
+    if [ -e "$CN_CHECKPOINT" ]; then
+        cp $CN_CHECKPOINT $SCRATCH_DIR/
+        echo "cn_checkpoint copied successfully."
+    fi 
+    cp $CN $SCRATCH_DIR/
+    cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
+    python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
 
 cleanup

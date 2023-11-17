@@ -2,6 +2,8 @@ import os
 import argparse
 import h5py
 import glob
+import pickle
+import gzip
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -26,6 +28,8 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
+parser.add_argument("--data_size", type=str, required=True)
+parser.add_argument("--job", type=str, required=True)
 parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
 
@@ -37,7 +41,7 @@ print_with_timestamp("Starting the script")
 def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, filename):
     checkpoint = {
         'epoch': epoch,
-        'unet_state_dict': unet.state_dict(),
+        'unet_state_dict': unet.module.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
@@ -52,21 +56,38 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
 
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
-    def __init__(self, hdf5_file):
+    def __init__(self, hdf5_file, data_size):
         self.hdf5_file = hdf5_file
+        self.data_size = data_size
 
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            return len(f['all_slices'])
+            # Assuming image_slices and annotation_slices have the same length
+            return len(f['bg'])
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            image_data = f['all_slices'][idx]
-            image_data = torch.tensor(image_data).unsqueeze(0)
-        return image_data
+            bg_data = f['bg'][idx]
+            raw_data = f['raw'][idx]
+            if self.data_size == 'xs':
+                gt_data = f['gt'][idx]
+
+        # Convert to PyTorch tensors
+        chann_1 = torch.tensor(raw_data)
+        chann_2 = torch.tensor(bg_data)
+        if self.data_size == 'xs':
+            chann_3 = torch.tensor(gt_data)
+
+        # Stack the image and annotation along the channel dimension
+        if self.data_size == 'xs':
+            combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
+        else: 
+            combined = torch.stack([chann_1, chann_2], dim=0)
+
+        return combined
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(args.output_file)
+dataset = NiftiHDF5Dataset(args.output_file, args.data_size)
 
 ldm_best_val_loss = float('inf')
 
@@ -82,17 +103,22 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=15, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=15, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
+if args.data_size == 'xs':
+    number_of_channels = 3
+else:
+    number_of_channels = 2
+
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
+    in_channels=number_of_channels,
+    out_channels=number_of_channels,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -101,15 +127,20 @@ unet = DiffusionModelUNet(
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=number_of_channels, out_channels=number_of_channels, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
-autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
+if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
+    new_state_dict = {k[len("module."):]: v for k, v in vae_model['autoencoder_state_dict'].items()}
+else:
+    new_state_dict = vae_model['autoencoder_state_dict']
+autoencoderkl = autoencoderkl.to(device).half()
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
+unet = torch.nn.DataParallel(unet)
 unet = unet.to(device)
-autoencoderkl = autoencoderkl.to(device).half()
+
 
 start_epoch = 0
 checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
@@ -117,7 +148,7 @@ if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
-    unet.load_state_dict(checkpoint['unet_state_dict'])
+    unet.module.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
@@ -239,4 +270,65 @@ date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
 save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_model_{date_time}.pth')
 
+# print out the samples:
+
+number_of_samples = 10 
+data_dict = {}
+for i in range(number_of_samples):
+    unet.eval()
+    scheduler.set_timesteps(num_inference_steps=1000)
+    noise = torch.randn((1, number_of_channels, 64, 64))
+    noise = noise.to(device)
+    
+    with torch.no_grad():
+        image, intermediates = inferer.sample(
+            input_noise=noise,
+            diffusion_model=unet,
+            scheduler=scheduler,
+            save_intermediates=True,
+            intermediate_steps=100,
+            autoencoder_model=autoencoderkl,
+        )
+    # Store intermediates and noise in the dictionary
+    data_dict[i] = {'intermediates': intermediates, 'noise': noise}
+    # Decode latent representation of the intermediary images
+    with torch.no_grad():
+        # Concatenating the images for each channel (first two channels in this case) and then all channels together
+        concat_channels = [torch.cat([img[:, j, :, :].unsqueeze(1) for img in intermediates], dim=-1) for j in range(number_of_channels)]
+        concat_all_channels = torch.cat(concat_channels, dim=-2)
+    
+    # Plotting
+    fig, ax = plt.subplots(figsize=(12, number_of_channels))
+    im = ax.imshow(concat_all_channels[0, 0].cpu(), cmap="jet", vmin=0, vmax=1)
+    # Remove the axis
+    ax.axis('off')
+    
+    # Add the colorbar
+    cbar = plt.colorbar(im, ax=ax, fraction=0.015, pad=0.04)
+    cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
+    # Adding y labels for the first and second channel
+    # The labels are placed based on the size of the concatenated tensor and the size of each channel image
+    channel_height = concat_all_channels.size(2) // number_of_channels
+    channel_labels = ['Bg', 'Raw', 'Gt']
+    for i in range(number_of_channels):
+        ax.text(-150, channel_height * (0.5 + i), channel_labels[i], fontsize=12, va='center', ha='center')
+
+    # Save each plot as a high DPI PNG
+    plt.savefig(f'sample_{i}.png', dpi=300)
+    plt.close()
+
+# Save the data dictionary as a pickle file
+with open('data_dict.pkl', 'wb') as f:
+    pickle.dump(data_dict, f)
+
+# Compress the PNG files and pickle file using gzip
+with zipfile.ZipFile('samples_{args.job}.zip', 'w') as zipf:
+    for i in range(number_of_samples):
+        zipf.write(f'sample_{i}.png')
+        os.remove(f'sample_{i}.png')
+    zipf.write('data_dict.pkl')
+    os.remove('data_dict.pkl')
+
 torch.cuda.empty_cache()
+
+

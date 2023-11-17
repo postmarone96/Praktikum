@@ -37,7 +37,7 @@ print_with_timestamp("Starting the script")
 def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, filename):
     checkpoint = {
         'epoch': epoch,
-        'unet_state_dict': unet.module.state_dict(),
+        'unet_state_dict': unet.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
@@ -57,23 +57,13 @@ class NiftiHDF5Dataset(Dataset):
 
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            # Assuming image_slices and annotation_slices have the same length
-            return len(f['bg'])
+            return len(f['all_slices'])
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            bg_data = f['bg'][idx]
-            raw_data = f['raw'][idx]
-
-        # Convert to PyTorch tensors
-        chann_1 = torch.tensor(raw_data)
-        chann_2 = torch.tensor(bg_data)
-        # chann_3 = chann_1
-
-        # Stack the image and annotation along the channel dimension
-        combined = torch.stack([chann_1, chann_2], dim=0)
-
-        return combined
+            image_data = f['all_slices'][idx]
+            image_data = torch.tensor(image_data).unsqueeze(0)
+        return image_data
 
 print_with_timestamp("Loading data")
 dataset = NiftiHDF5Dataset(args.output_file)
@@ -92,8 +82,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=15, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=15, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -101,8 +91,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=2,
-    out_channels=2,
+    in_channels=3,
+    out_channels=3,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -111,18 +101,15 @@ unet = DiffusionModelUNet(
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 scaler = GradScaler()
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
-autoencoderkl.module.load_state_dict(vae_model['autoencoder_state_dict'])
-autoencoderkl = autoencoderkl.to(device).half()
+autoencoderkl.load_state_dict(vae_model['autoencoder_state_dict'])
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
-unet = torch.nn.DataParallel(unet)
 unet = unet.to(device)
-
+autoencoderkl = autoencoderkl.to(device).half()
 
 start_epoch = 0
 checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
@@ -130,7 +117,7 @@ if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
-    unet.module.load_state_dict(checkpoint['unet_state_dict'])
+    unet.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
@@ -151,7 +138,7 @@ val_interval = 2
 check_data = next(iter(train_loader))
 with torch.no_grad():
     with autocast(enabled=True):
-        z = autoencoderkl.module.encode_stage_2_inputs(check_data.to(device))
+        z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
 print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
 
@@ -167,8 +154,8 @@ for epoch in range(start_epoch, n_epochs):
         images = batch.to(device)
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
-            z_mu, z_sigma = autoencoderkl.module.encode(images)
-            z = autoencoderkl.module.sampling(z_mu, z_sigma)
+            z_mu, z_sigma = autoencoderkl.encode(images)
+            z = autoencoderkl.sampling(z_mu, z_sigma)
             noise = torch.randn_like(z).to(device)
             timesteps = torch.randint(0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device).long()
             noise_pred = inferer(
@@ -193,8 +180,8 @@ for epoch in range(start_epoch, n_epochs):
                 images = batch.to(device)
 
                 with autocast(enabled=True):
-                    z_mu, z_sigma = autoencoderkl.module.encode(images)
-                    z = autoencoderkl.module.sampling(z_mu, z_sigma)
+                    z_mu, z_sigma = autoencoderkl.encode(images)
+                    z = autoencoderkl.sampling(z_mu, z_sigma)
                     noise = torch.randn_like(z).to(device)
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device

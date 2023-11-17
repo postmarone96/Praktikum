@@ -9,59 +9,97 @@ import psutil
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_path", type=str, required=True)
 parser.add_argument("--output_file", type=str, required=True)
+parser.add_argument("--data_size", type=str, required=True)
 args = parser.parse_args()
 
-
 class NiftiPreprocessor:
-    def __init__(self, root_dir, output_file):
-        self.root_dir = root_dir
-        self.nii_files = [os.path.join(root_dir, f) for f in os.listdir(root_dir) if f.endswith('.nii.gz')]
+    def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
+        self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
+        self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
+        if data_size == 'xs':
+            self.gt = sorted([os.path.join(gt_dir, f) for f in os.listdir(gt_dir) if f.endswith('.nii.gz')])
         self.output_file = output_file
 
     def process_and_save(self):
-        # Compute total slices for the progress bar
-        total_slices = 0
-        for nii_path in self.nii_files:
-            img = nib.load(nii_path)
-            total_slices += img.shape[2]  # Assuming images are HxWxD
+        # Assuming equal number of image and annotation files
+        assert len(self.raw) == len(self.bg), "Mismatch in number files"
+        if data_size == 'xs':
+            assert len(self.raw) == len(self.gt), "Mismatch in number gt files"
 
-        # Buffer to store slices
-        buffer = []
+        buffer_raw = []
+        buffer_bg = []
+        if data_size == 'xs':
+            buffer_gt = []
 
         with h5py.File(self.output_file, 'w') as f:
-            # Create initial empty dataset
-            dset = f.create_dataset('all_slices', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            dset_raw = f.create_dataset('raw', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            dset_bg = f.create_dataset('bg', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            if data_size == 'xs':
+                dset_gt = f.create_dataset('gt', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
-            slice_count = 0
+            for raw_path, bg_path, gt_path in zip(self.raw, self.bg, self.gt):
+                # Handle raw
+                buffer_raw.extend(self.process_single_nifti(raw_path))
+                # Handle bg
+                buffer_bg.extend(self.process_single_nifti(bg_path))
+                # Handle gt
+                if data_size == 'xs':
+                    buffer_gt.extend(self.process_single_nifti_for_masks(gt_path))
 
-            for nii_path in self.nii_files:
-                img = nib.load(nii_path)
-                image_data = img.get_fdata()
-                image_data = np.moveaxis(image_data, -1, 0)
-                image_data = image_data.astype(np.float32)
+                # Save buffer if it's big enough
+                if len(buffer_raw) >= 30000:
+                    self.save_buffer_to_dataset(dset_raw, buffer_raw)
+                    self.save_buffer_to_dataset(dset_bg, buffer_bg)
+                    if data_size == 'xs':
+                        self.save_buffer_to_dataset(dset_gt, buffer_gt)
+                    buffer_raw.clear()
+                    buffer_bg.clear()
+                    if data_size == 'xs':
+                        buffer_gt.clear()
 
-                for img in image_data:
-                    max_value = np.max(img)
-                    img /= max_value
-                    img_cropped = img[0:256, 0:256]
-                    
-                    # Append to buffer
-                    buffer.append(img_cropped)
-                    slice_count += 1
+            # If there's any remaining data in the buffers, save them
+            if buffer_raw:
+                self.save_buffer_to_dataset(dset_raw, buffer_raw)
+            if buffer_bg:
+                self.save_buffer_to_dataset(dset_bg, buffer_bg)
+            if data_size == 'xs' and buffer_gt:
+                self.save_buffer_to_dataset(dset_gt, buffer_gt)
 
-                    # If buffer size reaches 10000, save and clear
-                    if len(buffer) == 30000:
-                        self.save_buffer_to_dataset(dset, buffer)
-                        buffer.clear()
-                        
-            # If there's any remaining data in the buffer, save it
-            if buffer:
-                self.save_buffer_to_dataset(dset, buffer)
+    def process_single_nifti(self, nii_path):
+        img = nib.load(nii_path)
+        image_data = img.get_fdata()
+        image_data = np.moveaxis(image_data, -1, 0)
+        image_data = image_data.astype(np.float32)
+        buffer = []
+        for img in image_data:
+            max_value = np.max(img)
+            img /= max_value
+            img_cropped = img[0:256, 0:256]
+            buffer.append(img_cropped)
+        return buffer
+    
+    def process_single_nifti_for_masks(self, nii_path):
+        img = nib.load(nii_path)
+        image_data = img.get_fdata()
+        image_data = np.moveaxis(image_data, -1, 0)
+        image_data = image_data.astype(np.float32)
+        buffer = []
+        for img in image_data:
+            max_value = np.max(img)
+            img /= max_value
+            img_cropped = img[0:256, 0:256]
+            img_cropped = (img_cropped > 0.5).astype(np.float32)
+            buffer.append(img_cropped)
+        return buffer
 
     def save_buffer_to_dataset(self, dataset, buffer):
         current_length = dataset.shape[0]
         dataset.resize((current_length + len(buffer), 256, 256))
         dataset[current_length:current_length + len(buffer)] = np.array(buffer)
-preprocessor = NiftiPreprocessor(root_dir=args.data_path, output_file=args.output_file)
-preprocessor.process_and_save()
 
+preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
+                                bg_dir=os.path.join(args.data_path, 'bg'),
+                                gt_dir=os.path.join(args.data_path, 'gt'), 
+                                output_file=args.output_file,
+                                data_size=args.data_size)
+preprocessor.process_and_save()

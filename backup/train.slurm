@@ -2,10 +2,10 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=o_2_%j.txt
-#SBATCH --error=e_2_%j.txt
+#SBATCH --output=o_%j.txt
+#SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
@@ -21,12 +21,9 @@ LDM_CHECKPOINT=$HOME/Praktikum/train_$ARG2/job_$ARG5/ldm_checkpoint_epoch_$ARG6.
 AE=$HOME/Praktikum/train_$ARG2/job_$ARG4/vae_model_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
-IDS_FILE="$HOME/Praktikum/ids.txt"
 
 echo "Create the directories"
 mkdir -p $SCRATCH_DIR
-mkdir -p $SCRATCH_DIR/bg
-mkdir -p $SCRATCH_DIR/raw
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
@@ -39,7 +36,7 @@ log_and_copy() {
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" | while read -r file; do
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -54,7 +51,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" | while read -r file; do
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -82,24 +79,9 @@ periodic_backup &
 BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
-    if [ "$ARG2" = 'xl' ]; then
-        while IFS= read -r id; do
-            cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/${id}" "$SCRATCH_DIR/bg/"
-        done < "$IDS_FILE"
-
-        while IFS= read -r id; do
-            cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/${id}" "$SCRATCH_DIR/raw/"
-        done < "$IDS_FILE"
-
-    elif [ "$ARG2" = 'xs' ]; then
-        SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
-        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/"
-        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/"
-        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/"
-    fi
-
-    cp $HOME/Praktikum/preprocessing_2_dim.py $SCRATCH_DIR/
-    python -u preprocessing_2_dim.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
+    find /lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/ -type f | shuf -n $ARG2 | xargs -I {} cp {} $SCRATCH_DIR/
+    cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE 
     echo "preprocessing completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
@@ -110,10 +92,10 @@ if [ "$ARG1" = "vae" ]; then
     echo "training vae"
     if [ -e "$AE_CHECKPOINT" ]; then
         cp $AE_CHECKPOINT $SCRATCH_DIR/
-        echo "vae_checkpoint copied successfully."
+        echo "ae_checkpoint copied successfully."
     fi 
-    cp $HOME/Praktikum/train_vae_2_dim.py $SCRATCH_DIR/
-    python -u train_vae_2_dim.py --output_file $OUTPUTFILE --lr $ARG3
+    cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
+    python -u train_vae.py --output_file $OUTPUTFILE --lr $ARG3
 elif [ "$ARG1" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
@@ -121,8 +103,8 @@ elif [ "$ARG1" = "ldm" ]; then
         echo "ldm_checkpoint copied successfully."
     fi 
     cp $AE $SCRATCH_DIR/
-    cp $HOME/Praktikum/train_ldm_2_dim.py $SCRATCH_DIR/
-    python -u train_ldm_2_dim.py --output_file $OUTPUTFILE --lr $ARG3
+    cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
+    python -u train_ldm.py --output_file $OUTPUTFILE --lr $ARG3
 fi
 
 cleanup

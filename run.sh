@@ -1,26 +1,26 @@
 #!/bin/bash
 
 # Collect arguments or set defaults
-ARG1=${1:-""}
-ARG2=${2:-0}
-ARG3=${3:-0}
-ARG4=${4:-0}
-ARG5=${5:-0}
-ARG6=${6:-0}
+MODEL=${1:-""}
+SIZE=${2:-""}
+LR=${3:-0}
+JVAE=${4:-0}
+JLDM=${5:-0}
+JCN=${6:-0}
+CP=${7:-0}
 
 # Export them as environment variables so they can be accessed within the SLURM script
-export ARG1
-export ARG2
-export ARG3
-export ARG4
-export ARG5
-export ARG6
+export MODEL
+export SIZE
+export LR
+export JVAE
+export JLDM
+export JCN
+export CP
 
-test -d train_${ARG2} || mkdir train_${ARG2}
-
-cp -f train.slurm train_${ARG2}/
-
-cd train_${ARG2}
+test -d train_${SIZE} || mkdir train_${SIZE}
+cp -f train.slurm train_${SIZE}/
+cd train_${SIZE}
 
 # Submit the SLURM job
 sbatch train.slurm
