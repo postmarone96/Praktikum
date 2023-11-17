@@ -96,9 +96,9 @@ if [ ! -e "$DATASET" ]; then
 
     elif [ "$SIZE" = 'xs' ]; then
         SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
-        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR/bg"
-        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR/raw"
-        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR/gt"
+        cp -r "$SRC_DIR/bg/" "$SCRATCH_DIR/bg/"
+        cp -r "$SRC_DIR/raw/" "$SCRATCH_DIR/raw/"
+        cp -r "$SRC_DIR/gt/" "$SCRATCH_DIR/gt/"
     fi
 
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
