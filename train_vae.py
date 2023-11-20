@@ -29,6 +29,12 @@ parser.add_argument("--data_size", type=str, required=True)
 parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
 
+
+if args.data_size == 'xs':
+    number_of_channels = 3
+else:
+    number_of_channels = 2
+    
 def print_with_timestamp(message):
     current_time = datetime.now()
     print(f"{current_time} - {message}")
@@ -166,11 +172,6 @@ n_epochs = 100
 val_interval = 2
 autoencoder_warm_up_n_epochs = -1
 num_example_images = 4
-
-if args.data_size == 'xs':
-    number_of_channels = 3
-else:
-    number_of_channels = 2
 
 
 print_with_timestamp("Start setting")
