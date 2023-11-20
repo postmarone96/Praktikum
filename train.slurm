@@ -15,12 +15,12 @@ echo "directory definition"
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-DATASET=$HOME/Praktikum/train_$SIZE/job_$JVAE/dataset.hdf5
-AE_CHECKPOINT=$HOME/Praktikum/train_$SIZE/job_$JVAE/vae_checkpoint_epoch_$CP.pth
-LDM_CHECKPOINT=$HOME/Praktikum/train_$SIZE/job_$JLDM/ldm_checkpoint_epoch_$CP.pth
-CN_CHECKPOINT="$HOME/Praktikum/train_$SIZE/job_$JCN/cn_checkpoint_epoch_$CP.pth"
-AE=$HOME/Praktikum/train_$SIZE/job_$JVAE/vae_model_*.pth
-LDM="$HOME/Praktikum/train_$SIZE/job_$JLDM/ldm_model_*.pth"
+DATASET=$SLURM_SUBMIT_DIR/job_$JVAE/dataset.hdf5
+AE_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JVAE/vae_checkpoint_epoch_$CP.pth
+LDM_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP.pth
+CN_CHECKPOINT="$SLURM_SUBMIT_DIR/job_$JCN/cn_checkpoint_epoch_$CP.pth"
+AE=$SLURM_SUBMIT_DIR/job_$JVAE/vae_model_*.pth
+LDM="$SLURM_SUBMIT_DIR/job_$JLDM/ldm_model_*.pth"
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 IDS_FILE="$HOME/Praktikum/ids.txt"
@@ -96,9 +96,9 @@ if [ ! -e "$DATASET" ]; then
 
     elif [ "$SIZE" = 'xs' ]; then
         SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
-        cp -r "$SRC_DIR/bg/" "$SCRATCH_DIR/bg/"
-        cp -r "$SRC_DIR/raw/" "$SCRATCH_DIR/raw/"
-        cp -r "$SRC_DIR/gt/" "$SCRATCH_DIR/gt/"
+        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR"
+        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR"
+        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR"
     fi
 
     cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
@@ -133,8 +133,8 @@ elif [ "$MODEL" = "cn" ]; then
     if [ -e "$CN_CHECKPOINT" ]; then
         cp $CN_CHECKPOINT $SCRATCH_DIR/
         echo "cn_checkpoint copied successfully."
-    fi 
-    cp $CN $SCRATCH_DIR/
+    fi
+    cp $LDM $SCRATCH_DIR/
     cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
