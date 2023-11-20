@@ -86,8 +86,8 @@ BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
     if [ "$SIZE" = 'xl' ]; then
-            cp -r $TARGET_DIR/data/bg "$SCRATCH_DIR"
-            cp -r $TARGET_DIR/data/raw "$SCRATCH_DIR"
+            cp -r $SLURM_SUBMIT_DIR/data/bg "$SCRATCH_DIR"
+            cp -r $SLURM_SUBMIT_DIR/data/raw "$SCRATCH_DIR"
 
     elif [ "$SIZE" = 'xs' ]; then
         SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
