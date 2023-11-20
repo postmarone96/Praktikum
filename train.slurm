@@ -86,13 +86,8 @@ BACKUP_PID=$!
 
 if [ ! -e "$DATASET" ]; then
     if [ "$SIZE" = 'xl' ]; then
-        while IFS= read -r id; do
-            cp -r "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00"/${id} "$SCRATCH_DIR/bg/"
-        done < "$IDS_FILE"
-
-        while IFS= read -r id; do
-            cp -r "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02"/${id} "$SCRATCH_DIR/raw/"
-        done < "$IDS_FILE"
+            cp -r $TARGET_DIR/data/bg "$SCRATCH_DIR"
+            cp -r $TARGET_DIR/data/raw "$SCRATCH_DIR"
 
     elif [ "$SIZE" = 'xs' ]; then
         SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"

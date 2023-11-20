@@ -270,7 +270,7 @@ date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
 save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_model_{date_time}.pth')
 
-# print out the samples:
+autoencoderkl = autoencoderkl.to(device).float()
 
 number_of_samples = 10 
 data_dict = {}
@@ -306,8 +306,6 @@ for i in range(number_of_samples):
     # Add the colorbar
     cbar = plt.colorbar(im, ax=ax, fraction=0.015, pad=0.04)
     cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
-    # Adding y labels for the first and second channel
-    # The labels are placed based on the size of the concatenated tensor and the size of each channel image
     channel_height = concat_all_channels.size(2) // number_of_channels
     channel_labels = ['Bg', 'Raw', 'Gt']
     for i in range(number_of_channels):
