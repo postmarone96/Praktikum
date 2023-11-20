@@ -38,13 +38,11 @@ class NiftiPreprocessor:
             if self.data_size == 'xs':
                 dset_gt = f.create_dataset('gt', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
-            for raw_path, bg_path, gt_path in zip(self.raw, self.bg, self.gt):
-                # Handle raw
+            for raw_path, bg_path in zip(self.raw, self.bg):
                 buffer_raw.extend(self.process_single_nifti(raw_path))
-                # Handle bg
                 buffer_bg.extend(self.process_single_nifti(bg_path))
-                # Handle gt
                 if self.data_size == 'xs':
+                    gt_path = self.gt[self.raw.index(raw_path)]  # Match raw and gt files
                     buffer_gt.extend(self.process_single_nifti_for_masks(gt_path))
 
                 # Save buffer if it's big enough
