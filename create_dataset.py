@@ -10,7 +10,7 @@ def copy_directory(src_dir, dst_dir):
         for id in ids_file:
             id = id.strip()
             src_path = os.path.join(src_dir, id)
-            shutil.copy(src_path, dst_path)
+            shutil.copy(src_path, dst_dir)
 
 if __name__ == "__main__":
     bg_dir = os.path.join(os.environ['HOME'], 'Praktikum/train_xl/data/bg')
