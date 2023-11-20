@@ -11,9 +11,16 @@
 #SBATCH --nice=1000
 #SBATCH --qos=gpu_normal
 
+SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
+mkdir -p "$SCRATCH_DIR"
+
+cd $SCRATCH_DIR
+
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
 cp $HOME/Praktikum/create_dataset.py $SCRATCH_DIR/
 python -u create_dataset.py
+
+rm -rf "$SCRATCH_DIR"
