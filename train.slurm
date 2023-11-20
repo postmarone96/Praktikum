@@ -87,11 +87,11 @@ BACKUP_PID=$!
 if [ ! -e "$DATASET" ]; then
     if [ "$SIZE" = 'xl' ]; then
         while IFS= read -r id; do
-            cp "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00"/${id} "$SCRATCH_DIR/bg/"
+            cp -r "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00"/${id} "$SCRATCH_DIR/bg/"
         done < "$IDS_FILE"
 
         while IFS= read -r id; do
-            cp "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02"/${id} "$SCRATCH_DIR/raw/"
+            cp -r "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02"/${id} "$SCRATCH_DIR/raw/"
         done < "$IDS_FILE"
 
     elif [ "$SIZE" = 'xs' ]; then
