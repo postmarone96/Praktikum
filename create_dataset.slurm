@@ -17,9 +17,9 @@ mkdir -p $HOME/Praktikum/train_xl/data/bg/
 mkdir -p $HOME/Praktikum/train_xl/data/raw/
 
 while IFS= read -r id; do
-    cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/${id}" "$HOME/Praktikum/train_$ARG2/data/bg/"
+    cp "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/${id}" "$HOME/Praktikum/train_$ARG2/data/bg/"
 done < "$IDS_FILE"
 
 while IFS= read -r id; do
-    cp "/lustre/groups/iterm/Rami/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/${id}" "$HOME/Praktikum/train_$ARG2/data/raw/"
+    cp "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/${id}" "$HOME/Praktikum/train_$ARG2/data/raw/"
 done < "$IDS_FILE"
