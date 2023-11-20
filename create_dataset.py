@@ -6,10 +6,13 @@ ids_file_path = os.path.join(os.environ['HOME'], 'Praktikum/ids.txt')
 def copy_directory(src_dir, dst_dir):
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
-    for id in open(ids_file_path, 'r'):
-        src_path = os.path.join(src_dir, id.strip())
-        dst_path = os.path.join(dst_dir, id.strip())
-        shutil.copytree(src_path, dst_path)
+    with open(ids_file_path, 'r') as ids_file:
+        for id in ids_file:
+            id = id.strip()
+            src_path = os.path.join(src_dir, id)
+            dst_path = os.path.join(dst_dir, id)
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dst_path)
 
 if __name__ == "__main__":
     bg_dir = os.path.join(os.environ['HOME'], 'Praktikum/train_xl/data/bg')
