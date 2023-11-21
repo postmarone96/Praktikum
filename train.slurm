@@ -42,7 +42,7 @@ log_and_copy() {
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" | while read -r file; do
+        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -57,7 +57,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" | while read -r file; do
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -133,5 +133,7 @@ elif [ "$MODEL" = "cn" ]; then
     cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
+
+cp $SCRATCH_DIR/pkl_dir/samples_*.zip $TARGET_DIR
 
 cleanup

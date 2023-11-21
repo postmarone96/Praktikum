@@ -311,21 +311,22 @@ for i in range(number_of_samples):
     for i in range(number_of_channels):
         ax.text(-150, channel_height * (0.5 + i), channel_labels[i], fontsize=12, va='center', ha='center')
 
-    # Save each plot as a high DPI PNG
-    plt.savefig(f'sample_{i}.png', dpi=300)
+    pkl_dir = 'pkl_dir'
+    os.makedirs(pkl_dir, exist_ok=True)
+    plt.savefig(os.path.join(pkl_dir, f'sample_{i}.png'), dpi=300)
     plt.close()
 
 # Save the data dictionary as a pickle file
-with open('data_dict.pkl', 'wb') as f:
+with open(os.path.join(pkl_dir, 'data_dict.pkl'), 'wb') as f:
     pickle.dump(data_dict, f)
 
 
-with zipfile.ZipFile('samples_{args.job}.zip', 'w') as zipf:
+with zipfile.ZipFile(os.path.join(pkl_dir, f'samples_{args.job}.zip'), 'w') as zipf:
     for i in range(number_of_samples):
-        zipf.write(f'sample_{i}.png')
-        os.remove(f'sample_{i}.png')
-    zipf.write('data_dict.pkl')
-    os.remove('data_dict.pkl')
+        zipf.write(os.path.join(pkl_dir, f'sample_{i}.png'))
+        os.remove(os.path.join(pkl_dir, f'sample_{i}.png'))
+    zipf.write(os.path.join(pkl_dir, 'data_dict.pkl'))
+    os.remove(os.path.join(pkl_dir, 'data_dict.pkl'))
 
 torch.cuda.empty_cache()
 
