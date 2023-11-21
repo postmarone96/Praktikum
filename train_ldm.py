@@ -4,6 +4,7 @@ import h5py
 import glob
 import pickle
 import zipfile
+import shutil
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -272,6 +273,10 @@ save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, sca
 
 autoencoderkl = autoencoderkl.to(device).float()
 
+current_working_directory = os.getcwd()  # Gets the directory where the script is being executed
+pkl_dir = os.path.join(current_working_directory, 'pkl_dir')
+os.makedirs(pkl_dir, exist_ok=True)
+
 number_of_samples = 10 
 data_dict = {}
 for i in range(number_of_samples):
@@ -311,8 +316,6 @@ for i in range(number_of_samples):
     for i in range(number_of_channels):
         ax.text(-150, channel_height * (0.5 + i), channel_labels[i], fontsize=12, va='center', ha='center')
 
-    pkl_dir = 'pkl_dir'
-    os.makedirs(pkl_dir, exist_ok=True)
     plt.savefig(os.path.join(pkl_dir, f'sample_{i}.png'), dpi=300)
     plt.close()
 
@@ -321,12 +324,9 @@ with open(os.path.join(pkl_dir, 'data_dict.pkl'), 'wb') as f:
     pickle.dump(data_dict, f)
 
 
-with zipfile.ZipFile(os.path.join(pkl_dir, f'samples_{args.job}.zip'), 'w') as zipf:
-    for i in range(number_of_samples):
-        zipf.write(os.path.join(pkl_dir, f'sample_{i}.png'))
-        os.remove(os.path.join(pkl_dir, f'sample_{i}.png'))
-    zipf.write(os.path.join(pkl_dir, 'data_dict.pkl'))
-    os.remove(os.path.join(pkl_dir, 'data_dict.pkl'))
+output_filename = os.path.join(current_working_directory, f'samples_{args.job}')  # Output file path
+
+shutil.make_archive(output_filename, 'zip', pkl_dir)
 
 torch.cuda.empty_cache()
 

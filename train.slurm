@@ -134,6 +134,6 @@ elif [ "$MODEL" = "cn" ]; then
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
 
-cp $SCRATCH_DIR/pkl_dir/samples_*.zip $TARGET_DIR
+cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
 cleanup
