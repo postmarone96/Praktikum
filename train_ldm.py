@@ -277,7 +277,7 @@ current_working_directory = os.getcwd()  # Gets the directory where the script i
 pkl_dir = os.path.join(current_working_directory, 'pkl_dir')
 os.makedirs(pkl_dir, exist_ok=True)
 
-number_of_samples = 10 
+number_of_samples = 30
 data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
@@ -313,8 +313,8 @@ for i in range(number_of_samples):
     cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
     channel_height = concat_all_channels.size(2) // number_of_channels
     channel_labels = ['Bg', 'Raw', 'Gt']
-    for i in range(number_of_channels):
-        ax.text(-150, channel_height * (0.5 + i), channel_labels[i], fontsize=12, va='center', ha='center')
+    for j in range(number_of_channels):
+        ax.text(-150, channel_height * (0.5 + j), channel_labels[j], fontsize=12, va='center', ha='center')
 
     plt.savefig(os.path.join(pkl_dir, f'sample_{i}.png'), dpi=300)
     plt.close()
