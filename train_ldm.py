@@ -277,12 +277,12 @@ current_working_directory = os.getcwd()  # Gets the directory where the script i
 pkl_dir = os.path.join(current_working_directory, 'pkl_dir')
 os.makedirs(pkl_dir, exist_ok=True)
 
-number_of_samples = 30
+number_of_samples = 50
 data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
     scheduler.set_timesteps(num_inference_steps=1000)
-    noise = torch.randn((1, number_of_channels, 64, 64))
+    noise = torch.randn((1, number_of_channels, 256, 256))
     noise = noise.to(device)
     
     with torch.no_grad():
