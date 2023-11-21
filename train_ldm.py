@@ -3,7 +3,7 @@ import argparse
 import h5py
 import glob
 import pickle
-import gzip
+import zipfile
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -319,7 +319,7 @@ for i in range(number_of_samples):
 with open('data_dict.pkl', 'wb') as f:
     pickle.dump(data_dict, f)
 
-# Compress the PNG files and pickle file using gzip
+
 with zipfile.ZipFile('samples_{args.job}.zip', 'w') as zipf:
     for i in range(number_of_samples):
         zipf.write(f'sample_{i}.png')
