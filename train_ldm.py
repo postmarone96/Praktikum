@@ -55,12 +55,16 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
     }
     torch.save(checkpoint, filename)
 
+if args.data_size == 'xs':
+    number_of_channels = 3
+else:
+    number_of_channels = 2
+
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
-    def __init__(self, hdf5_file, data_size):
+    def __init__(self, hdf5_file, number_of_channels):
         self.hdf5_file = hdf5_file
-        self.data_size = data_size
-
+        self.number_of_channels = number_of_channels
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
             # Assuming image_slices and annotation_slices have the same length
@@ -70,25 +74,28 @@ class NiftiHDF5Dataset(Dataset):
         with h5py.File(self.hdf5_file, 'r') as f:
             bg_data = f['bg'][idx]
             raw_data = f['raw'][idx]
-            if self.data_size == 'xs':
+            if self.number_of_channels == 3:
                 gt_data = f['gt'][idx]
 
         # Convert to PyTorch tensors
         chann_1 = torch.tensor(raw_data)
         chann_2 = torch.tensor(bg_data)
-        if self.data_size == 'xs':
+        if self.number_of_channels == 3:
             chann_3 = torch.tensor(gt_data)
 
         # Stack the image and annotation along the channel dimension
-        if self.data_size == 'xs':
+        if self.number_of_channels == 3:
             combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
         else: 
             combined = torch.stack([chann_1, chann_2], dim=0)
 
         return combined
 
+vae_best_val_loss = float('inf')
+ldm_best_val_loss = float('inf')
+
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(args.output_file, args.data_size)
+dataset = NiftiHDF5Dataset(args.output_file, number_of_channels)
 
 ldm_best_val_loss = float('inf')
 
@@ -109,11 +116,6 @@ val_loader = DataLoader(validation_dataset, batch_size=15, shuffle=False, num_wo
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
-
-if args.data_size == 'xs':
-    number_of_channels = 3
-else:
-    number_of_channels = 2
 
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
