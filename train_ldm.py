@@ -134,8 +134,11 @@ vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
     new_state_dict = {k[len("module."):]: v for k, v in vae_model['autoencoder_state_dict'].items()}
+    autoencoderkl.load_state_dict(new_state_dict)
 else:
     new_state_dict = vae_model['autoencoder_state_dict']
+    autoencoderkl.load_state_dict(new_state_dict)
+
 autoencoderkl = autoencoderkl.to(device).half()
 
 scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)

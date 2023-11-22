@@ -38,10 +38,10 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_cn(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, filename):
+def save_checkpoint_cn(epoch, controlnet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, filename):
     checkpoint = {
         'epoch': epoch,
-        'unet_state_dict': unet.state_dict(),
+        'cn_state_dict': controlnet.module.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
@@ -70,10 +70,10 @@ class NiftiHDF5Dataset(Dataset):
         # Convert to PyTorch tensors
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
-        chann_3 = chann_1
+        # chann_3 = chann_1
         # Stack the image and annotation along the channel dimension
         combined = {}
-        combined['image'] = torch.stack([chann_1, chann_2, chann_3], dim=0)
+        combined['image'] = torch.stack([chann_1, chann_2], dim=0)
         combined['gt'] = torch.tensor(gt).unsqueeze(0)
 
         return combined
@@ -95,8 +95,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=2, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=2, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=4, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -104,8 +104,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
+    in_channels=2,
+    out_channels=2,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -116,14 +116,19 @@ scaler = GradScaler()
 
 ldm_path = glob.glob('ldm_model_*.pth')
 ldm_model = torch.load(ldm_path[0])
-unet.load_state_dict(ldm_model['unet_state_dict'])
+if list(ldm['unet_state_dict'].keys())[0].startswith('module.'):
+    new_state_dict = {k[len("module."):]: v for k, v in ldm['unet_state_dict'].items()}
+    unet.load_state_dict(new_state_dict)
+else:
+    unet.load_state_dict(ldm_model['unet_state_dict'])
 
 scheduler = DDPMScheduler(num_train_timesteps=1000)
+unet = torch.nn.DataParallel(unet)
 unet = unet.to(device)
 # Create control net
 controlnet = ControlNet(
     spatial_dims=2,
-    in_channels=3,
+    in_channels=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
     num_res_blocks=2,
@@ -131,7 +136,9 @@ controlnet = ControlNet(
     conditioning_embedding_num_channels=(16,),
 )
 # Copy weights from the DM to the controlnet
-controlnet.load_state_dict(unet.state_dict(), strict=False)
+controlnet.load_state_dict(unet.module.state_dict(), strict=False)
+
+controlnet = torch.nn.DataParallel(controlnet)
 controlnet = controlnet.to(device)
 
 # Now, we freeze the parameters of the diffusion model.
@@ -145,7 +152,7 @@ if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
-    unet.load_state_dict(checkpoint['unet_state_dict'])
+    controlnet.module.load_state_dict(checkpoint['cn_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     epoch_losses = checkpoint['epoch_losses']
@@ -234,10 +241,10 @@ for epoch in range(start_epoch, n_epochs):
             break
         val_losses.append(val_epoch_loss / (step + 1))
 
-        save_checkpoint_cn(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_cn(epoch, controlnet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
         if val_loss < cn_best_val_loss:
             cn_best_val_loss = val_loss
-            save_checkpoint_cn(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, 'cn_best_checkpoint.pth')
+            save_checkpoint_cn(epoch, controlnet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, 'cn_best_checkpoint.pth')
 
 
     if epoch > val_interval:
@@ -264,6 +271,6 @@ now = datetime.now()
 # Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
-save_checkpoint_cn(epoch, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_model_{date_time}.pth')
+save_checkpoint_cn(epoch, controlnet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_model_{date_time}.pth')
 
 torch.cuda.empty_cache()
