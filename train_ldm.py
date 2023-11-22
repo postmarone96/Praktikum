@@ -282,7 +282,7 @@ data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
     scheduler.set_timesteps(num_inference_steps=1000)
-    noise = torch.randn((1, number_of_channels, 256, 256))
+    noise = torch.randn((1, number_of_channels, 64, 64))
     noise = noise.to(device)
     
     with torch.no_grad():
