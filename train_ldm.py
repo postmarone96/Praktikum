@@ -55,10 +55,10 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
     }
     torch.save(checkpoint, filename)
 
-if args.data_size == 'xs':
-    number_of_channels = 3
-else:
-    number_of_channels = 2
+#if args.data_size == 'xs':
+#    number_of_channels = 3
+#else:
+number_of_channels = 2
 
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
