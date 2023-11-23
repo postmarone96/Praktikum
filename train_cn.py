@@ -116,8 +116,8 @@ scaler = GradScaler()
 
 ldm_path = glob.glob('ldm_model_*.pth')
 ldm_model = torch.load(ldm_path[0])
-if list(ldm['unet_state_dict'].keys())[0].startswith('module.'):
-    new_state_dict = {k[len("module."):]: v for k, v in ldm['unet_state_dict'].items()}
+if list(ldm_model['unet_state_dict'].keys())[0].startswith('module.'):
+    new_state_dict = {k[len("module."):]: v for k, v in ldm_model['unet_state_dict'].items()}
     unet.load_state_dict(new_state_dict)
 else:
     unet.load_state_dict(ldm_model['unet_state_dict'])
