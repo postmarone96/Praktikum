@@ -166,8 +166,6 @@ else:
 
 inferer = DiffusionInferer(scheduler)
 
-device = torch.device("cuda")
-
 n_epochs = 150
 val_interval = 5
 epoch_losses = []
