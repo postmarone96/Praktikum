@@ -70,10 +70,10 @@ class NiftiHDF5Dataset(Dataset):
         # Convert to PyTorch tensors
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
-        # chann_3 = chann_1
+        chann_3 = chann_1
         # Stack the image and annotation along the channel dimension
         combined = {}
-        combined['image'] = torch.stack([chann_1, chann_2], dim=0)
+        combined['image'] = torch.stack([chann_1, chann_2, chann_3], dim=0)
         combined['gt'] = torch.tensor(gt).unsqueeze(0)
 
         return combined
@@ -104,8 +104,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=2,
-    out_channels=2,
+    in_channels=3,
+    out_channels=3,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -128,7 +128,7 @@ unet = unet.to(device)
 # Create control net
 controlnet = ControlNet(
     spatial_dims=2,
-    in_channels=2,
+    in_channels=3,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
     num_res_blocks=2,
