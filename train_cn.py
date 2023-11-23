@@ -124,7 +124,7 @@ else:
 
 scheduler = DDPMScheduler(num_train_timesteps=1000)
 unet = torch.nn.DataParallel(unet)
-unet = unet.to(device).half()
+unet = unet.to(device)
 # Create control net
 controlnet = ControlNet(
     spatial_dims=2,
@@ -139,7 +139,7 @@ controlnet = ControlNet(
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
 
 controlnet = torch.nn.DataParallel(controlnet)
-controlnet = controlnet.to(device).half()
+controlnet = controlnet.to(device)
 
 # Now, we freeze the parameters of the diffusion model.
 for p in unet.parameters():
