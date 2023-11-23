@@ -120,8 +120,8 @@ device = torch.device("cuda")
 print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=number_of_channels,
-    out_channels=number_of_channels,
+    in_channels=3,
+    out_channels=3,
     num_res_blocks=2,
     num_channels=(128, 256, 512),
     attention_levels=(False, True, True),
@@ -287,7 +287,7 @@ data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
     scheduler.set_timesteps(num_inference_steps=1000)
-    noise = torch.randn((1, number_of_channels, 64, 64))
+    noise = torch.randn((1, 3, 64, 64))
     noise = noise.to(device)
     
     with torch.no_grad():
