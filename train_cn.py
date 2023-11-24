@@ -70,10 +70,10 @@ class NiftiHDF5Dataset(Dataset):
         # Convert to PyTorch tensors
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
-        chann_3 = chann_1
+        # chann_3 = chann_1
         # Stack the image and annotation along the channel dimension
         combined = {}
-        combined['image'] = torch.stack([chann_1, chann_2, chann_3], dim=0)
+        combined['image'] = torch.stack([chann_1, chann_2], dim=0)
         combined['gt'] = torch.tensor(gt).unsqueeze(0)
 
         return combined
@@ -95,8 +95,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=4, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
