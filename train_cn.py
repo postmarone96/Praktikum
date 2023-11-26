@@ -58,7 +58,6 @@ class NiftiHDF5Dataset(Dataset):
 
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            # Assuming image_slices and annotation_slices have the same length
             return len(f['bg'])
 
     def __getitem__(self, idx):
@@ -66,12 +65,9 @@ class NiftiHDF5Dataset(Dataset):
             bg = f['bg'][idx]
             raw = f['raw'][idx]
             gt = f['gt'][idx]
-
-        # Convert to PyTorch tensors
+            
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
-        # chann_3 = chann_1
-        # Stack the image and annotation along the channel dimension
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2], dim=0)
         combined['gt'] = torch.tensor(gt).unsqueeze(0)
@@ -164,7 +160,13 @@ else:
     val_losses = []
     val_epochs = []
 
-inferer = DiffusionInferer(scheduler)
+check_data = next(iter(train_loader))
+with torch.no_grad():
+    with autocast(enabled=True):
+        z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
+print(f"Scaling factor set to {1/torch.std(z)}")
+scale_factor = 1 / torch.std(z)
+inferer = DiffusionInferer(scheduler, scale_factor=scale_factor)
 
 n_epochs = 150
 val_interval = 5
@@ -173,6 +175,7 @@ val_epoch_losses = []
 
 for epoch in range(start_epoch, n_epochs):
     unet.train()
+    autoencoderkl.eval()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
     progress_bar.set_description(f"Epoch {epoch}")
@@ -183,13 +186,14 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
 
         with autocast(enabled=True):
-
+            z_mu, z_sigma = autoencoderkl.encode(images)
+            z = autoencoderkl.sampling(z_mu, z_sigma)
             # Generate random noise
-            noise = torch.randn_like(images).to(device)
+            noise = torch.randn_like(z).to(device)
 
             # Create timesteps
             timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
+                0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
             ).long()
 
             images_noised = scheduler.add_noise(images, noise=noise, timesteps=timesteps)
@@ -203,6 +207,7 @@ for epoch in range(start_epoch, n_epochs):
             noise_pred = unet(
                 x=images_noised,
                 timesteps=timesteps,
+                autoencoder_model=autoencoderkl,
                 down_block_additional_residuals=down_block_res_samples,
                 mid_block_additional_residual=mid_block_res_sample,
             )
