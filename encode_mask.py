@@ -70,7 +70,7 @@ class NiftiHDF5Dataset(Dataset):
         with h5py.File(self.hdf5_file, 'r') as f:
             gt_data = f['gt'][idx]
 
-        return torch.tensor(gt_data)
+        return torch.tensor(gt_data).unsqueeze(0)
 
 vae_best_val_loss = float('inf')
 
