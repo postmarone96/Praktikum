@@ -3,6 +3,7 @@ import argparse
 import h5py
 import glob
 from datetime import datetime
+import matplotlib.pyplot
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -12,13 +13,15 @@ import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
+from torchvision import transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
-from generative.inferers import DiffusionInferer
+from generative.inferers import DiffusionInferer, LatentDiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
-from generative.networks.nets import DiffusionModelUNet, ControlNet
+from generative.networks.nets import DiffusionModelUNet, ControlNet, AutoencoderKL
 from generative.networks.schedulers import DDPMScheduler
+
 
 import tempfile
 import time
