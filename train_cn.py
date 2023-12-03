@@ -258,7 +258,13 @@ for epoch in range(start_epoch, n_epochs):
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (encoded_images.shape[0],), device=encoded_images.device
                     ).long()
-                    noise_pred = inferer(inputs=encoded_images, diffusion_model=unet, noise=noise, timesteps=timesteps)
+                    noise_pred = inferer(
+                        inputs=images, 
+                        diffusion_model=unet, 
+                        noise=noise, 
+                        timesteps=timesteps, 
+                        autoencoder_model=autoencoderkl
+                        )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
