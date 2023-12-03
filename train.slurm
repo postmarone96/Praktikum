@@ -20,8 +20,10 @@ DATASET=$SLURM_SUBMIT_DIR/job_$JVAE/dataset.hdf5
 AE_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JVAE/vae_checkpoint_epoch_$CP.pth
 LDM_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP.pth
 CN_CHECKPOINT="$SLURM_SUBMIT_DIR/job_$JCN/cn_checkpoint_epoch_$CP.pth"
+MASK_CHECKPOINT="$SLURM_SUBMIT_DIR/job_$JMASK/mask_checkpoint_epoch_$CP.pth"
 AE=$SLURM_SUBMIT_DIR/job_$JVAE/vae_model_*.pth
-LDM="$SLURM_SUBMIT_DIR/job_$JLDM/ldm_model_*.pth"
+LDM=$SLURM_SUBMIT_DIR/job_$JLDM/ldm_model_*.pth
+MASK=$SLURM_SUBMIT_DIR/job_$JMASK/mask_model_*.pth
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 IDS_FILE="$HOME/Praktikum/ids.txt"
@@ -111,10 +113,17 @@ if [ "$MODEL" = "vae" ]; then
         cp $AE_CHECKPOINT $SCRATCH_DIR/
         echo "vae_checkpoint copied successfully."
     fi 
-    # cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
-    # python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
+    cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
+    python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
+
+if [ "$MODEL" = "maks" ]; then
+    echo "training mask"
+    if [ -e "$MASK_CHECKPOINT" ]; then
+        cp $MASK_CHECKPOINT $SCRATCH_DIR/
+        echo "mask_checkpoint copied successfully."
+    fi 
     cp $HOME/Praktikum/encode_mask.py $SCRATCH_DIR/
-    python -u encode_mask.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
+    python -u encode_mask.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE
 
 elif [ "$MODEL" = "ldm" ]; then
     echo "training ldm"

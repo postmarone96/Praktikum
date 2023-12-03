@@ -6,8 +6,9 @@ SIZE=${2:-""}
 LR=${3:-0}
 JVAE=${4:-0}
 JLDM=${5:-0}
-JCN=${6:-0}
-CP=${7:-0}
+JMASK=${6:-0}
+JCN=${7:-0}
+CP=${8:-0}
 
 # Export them as environment variables so they can be accessed within the SLURM script
 export MODEL
@@ -15,6 +16,7 @@ export SIZE
 export LR
 export JVAE
 export JLDM
+export JMASK
 export JCN
 export CP
 
