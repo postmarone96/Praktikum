@@ -141,6 +141,8 @@ elif [ "$MODEL" = "cn" ]; then
         cp $CN_CHECKPOINT $SCRATCH_DIR/
         echo "cn_checkpoint copied successfully."
     fi
+    cp $AE $SCRATCH_DIR/
+    cp $MASK $SCRATCH_DIR/
     cp $LDM $SCRATCH_DIR/
     cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
