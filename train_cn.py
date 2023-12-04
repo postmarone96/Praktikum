@@ -268,7 +268,7 @@ for epoch in range(start_epoch, n_epochs):
 
             val_epoch_loss += val_loss.item()
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
-            break
+            # break
         val_losses.append(val_epoch_loss / (step + 1))
 
         save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
