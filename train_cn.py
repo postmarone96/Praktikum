@@ -198,8 +198,8 @@ else:
 inferer = DiffusionInferer(scheduler)
 
 # Training loop
-n_epochs = 150
-val_interval = 5
+n_epochs = 900
+val_interval = 1
 for epoch in range(start_epoch, n_epochs):
     unet.train()
     autoencoderkl.eval()
@@ -225,7 +225,7 @@ for epoch in range(start_epoch, n_epochs):
             images_noised = scheduler.add_noise(encoded_images, noise=noise, timesteps=timesteps)
 
             # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=images_noised, timesteps=timesteps, controlnet_cond=encoded_masks)
+            down_block_res_samples, mid_block_res_sample = controlnet(x=images_noised, timesteps=timesteps, controlnet_cond=encoded_masks, conditioning_scale=0.3)
             # Get model prediction
             noise_pred = unet(
             x=images_noised,
@@ -245,7 +245,7 @@ for epoch in range(start_epoch, n_epochs):
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
     epoch_losses.append(epoch_loss / (step + 1))
 
-    if epoch % 5 == 0 and epoch > 0:
+    if epoch % 1 == 0 and epoch > 0:
         val_epochs.append(epoch)
         unet.eval()
         val_epoch_loss = 0
