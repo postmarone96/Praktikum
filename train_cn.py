@@ -189,13 +189,13 @@ else:
     val_epochs = []
 
 # Inferer
-check_data = next(iter(train_loader))
-with torch.no_grad():
-    with autocast(enabled=True):
-        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
-print(f"Scaling factor set to {1/torch.std(z)}")
-scale_factor = 1 / torch.std(z)
-inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+#check_data = next(iter(train_loader))
+#with torch.no_grad():
+#    with autocast(enabled=True):
+#        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
+#print(f"Scaling factor set to {1/torch.std(z)}")
+#scale_factor = 1 / torch.std(z)
+inferer = DiffusionInferer(scheduler)
 
 # Training loop
 n_epochs = 150
@@ -259,11 +259,10 @@ for epoch in range(start_epoch, n_epochs):
                         0, inferer.scheduler.num_train_timesteps, (encoded_images.shape[0],), device=encoded_images.device
                     ).long()
                     noise_pred = inferer(
-                        inputs=images, 
+                        inputs=encoded_images, 
                         diffusion_model=unet, 
                         noise=noise, 
-                        timesteps=timesteps, 
-                        autoencoder_model=autoencoderkl
+                        timesteps=timesteps,
                         )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
