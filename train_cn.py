@@ -225,7 +225,7 @@ for epoch in range(start_epoch, n_epochs):
             images_noised = scheduler.add_noise(encoded_images, noise=noise, timesteps=timesteps)
 
             # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=images_noised, timesteps=timesteps, controlnet_cond=encoded_masks, conditioning_scale=0.5)
+            down_block_res_samples, mid_block_res_sample = controlnet(x=images_noised, timesteps=timesteps, controlnet_cond=encoded_masks, conditioning_scale=1.0)
             # Get model prediction
             noise_pred = unet(
             x=images_noised,
