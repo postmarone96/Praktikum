@@ -153,7 +153,7 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(16, 64, ),
+    conditioning_embedding_num_channels=(16, 32, ),
     conditioning_embedding_in_channels = 3,
 )
 # Copy weights from the DM to the controlnet
