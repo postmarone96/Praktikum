@@ -245,7 +245,7 @@ for epoch in range(start_epoch, n_epochs):
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
     epoch_losses.append(epoch_loss / (step + 1))
 
-    if epoch % 1 == 0 and epoch > 0:
+    if epoch % val_interval == 0 and epoch > 0:
         val_epochs.append(epoch)
         unet.eval()
         val_epoch_loss = 0
@@ -271,10 +271,8 @@ for epoch in range(start_epoch, n_epochs):
             # break
         val_losses.append(val_epoch_loss / (step + 1))
 
+    if epoch % 50 == 0 and epoch > 0:
         save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
-        if val_loss < cn_best_val_loss:
-            cn_best_val_loss = val_loss
-            save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, 'cn_best_checkpoint.pth')
 
 
     if epoch > val_interval:
