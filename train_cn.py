@@ -268,7 +268,7 @@ for epoch in range(start_epoch, n_epochs):
 
             val_epoch_loss += val_loss.item()
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
-            break
+            # break
         val_losses.append(val_epoch_loss / (step + 1))
 
     if epoch % 50 == 0 and epoch > 0:
