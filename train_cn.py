@@ -153,7 +153,7 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(128, 256, 512),
+    conditioning_embedding_num_channels=(128, 128, 512),
     conditioning_embedding_in_channels = 1,
 )
 # Copy weights from the DM to the controlnet
@@ -201,8 +201,8 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 n_epochs = 150
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
-    unet.eval()
-    autoencoderkl.eval()
+    #unet.eval()
+    #autoencoderkl.eval()
     controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
@@ -210,9 +210,7 @@ for epoch in range(start_epoch, n_epochs):
     for step, batch in progress_bar:
         images = batch["image"].to(device)
         masks = batch["gt"].to(device)
-
-        # optimizer.zero_grad(set_to_none=True)
-
+        optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
                 e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
@@ -251,8 +249,8 @@ for epoch in range(start_epoch, n_epochs):
 
     if epoch % val_interval == 0 and epoch > 0:
         val_epochs.append(epoch)
-        autoencoderkl.eval()
-        unet.eval()
+        #autoencoderkl.eval()
+        #unet.eval()
         controlnet.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
@@ -284,7 +282,7 @@ for epoch in range(start_epoch, n_epochs):
 
             val_epoch_loss += val_loss.item()
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
-            # break
+            break
         val_losses.append(val_epoch_loss / (step + 1))
 
     if epoch % 5 == 0 and epoch > 0:
