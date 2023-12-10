@@ -199,7 +199,7 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
 # Training loop
 n_epochs = 150
-val_interval = 1
+val_interval = 2
 for epoch in range(start_epoch, n_epochs):
     unet.train()
     autoencoderkl.eval()
@@ -254,24 +254,31 @@ for epoch in range(start_epoch, n_epochs):
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch["image"].to(device)
-            masks = batch['gt'].to(device)
+            masks = batch["gt"].to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
                     #encoded_images = autoencoderkl.(images)
                     e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
-                    
+                    # noise generation
                     noise = torch.randn_like(e).to(device)
-                    
+                    # timestep generation
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
                     ).long()
-                    
+                    # noisy image
                     noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
-
+                    # control embedding generation
                     down_block_res_samples, mid_block_res_sample = controlnet(
                         x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=0.3
                     )
-                    
+                    # noise prediction
+                    noise_pred = unet(
+                        x=noisy_e,
+                        timesteps=timesteps,
+                        down_block_additional_residuals=down_block_res_samples,
+                        mid_block_additional_residual=mid_block_res_sample
+                    )
+                    #val loss
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
