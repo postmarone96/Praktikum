@@ -213,19 +213,17 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
-                e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                e = autoencoderkl.encoder(images) * scale_factor
            # encoded_images = autoencoderkl.encoder(images)
            # encoded_masks = mask_autoencoderkl.encoder(masks)
             # Generate random noise
             noise = torch.randn_like(e).to(device)
-            
             # Create timesteps
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
             
             noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
-
             # Get controlnet output
             down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
             # Get model prediction
@@ -259,25 +257,18 @@ for epoch in range(start_epoch, n_epochs):
             with torch.no_grad():
                 with autocast(enabled=True):
                     #encoded_images = autoencoderkl.(images)
-                    e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                    e = autoencoderkl.encoder(images) * scale_factor
                     # noise generation
                     noise = torch.randn_like(e).to(device)
                     # timestep generation
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
                     ).long()
-                    # noisy image
-                    noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
-                    # control embedding generation
-                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
-                    # noise prediction
-                    noise_pred = unet(
-                        x=noisy_e,
-                        timesteps=timesteps,
-                        down_block_additional_residuals=down_block_res_samples,
-                        mid_block_additional_residual=mid_block_res_sample
-                    )
-                    #val loss
+                    noise = torch.randn_like(images).to(device)
+                    timesteps = torch.randint(
+                        0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
+                    ).long()
+                    noise_pred = inferer(inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps)
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
