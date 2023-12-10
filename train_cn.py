@@ -95,8 +95,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=4, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=4, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=8, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -153,8 +153,8 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(16,),
-    conditioning_embedding_in_channels = 3,
+    conditioning_embedding_num_channels=(128, 256, 512),
+    conditioning_embedding_in_channels = 1,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
@@ -189,16 +189,16 @@ else:
     val_epochs = []
 
 # Inferer
-#check_data = next(iter(train_loader))
-#with torch.no_grad():
-#    with autocast(enabled=True):
-#        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
+check_data = next(iter(train_loader))
+with torch.no_grad():
+    with autocast(enabled=True):
+        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
 #print(f"Scaling factor set to {1/torch.std(z)}")
-#scale_factor = 1 / torch.std(z)
-inferer = DiffusionInferer(scheduler)
+scale_factor = 1 / torch.std(z)
+inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
 # Training loop
-n_epochs = 900
+n_epochs = 150
 val_interval = 1
 for epoch in range(start_epoch, n_epochs):
     unet.train()
@@ -210,25 +210,28 @@ for epoch in range(start_epoch, n_epochs):
         images = batch["image"].to(device)
         masks = batch["gt"].to(device)
 
-        optimizer.zero_grad(set_to_none=True)
+        # optimizer.zero_grad(set_to_none=True)
 
         with autocast(enabled=True):
-            encoded_images = autoencoderkl.encoder(images)
-            encoded_masks = mask_autoencoderkl.encoder(masks)
+            with torch.no_grad():
+                e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+           # encoded_images = autoencoderkl.encoder(images)
+           # encoded_masks = mask_autoencoderkl.encoder(masks)
             # Generate random noise
-            noise = torch.randn_like(encoded_images).to(device)
+            noise = torch.randn_like(e).to(device)
+            
             # Create timesteps
             timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (encoded_images.shape[0],), device=encoded_images.device
+                0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
-
-            images_noised = scheduler.add_noise(encoded_images, noise=noise, timesteps=timesteps)
+            
+            noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
 
             # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=images_noised, timesteps=timesteps, controlnet_cond=encoded_masks, conditioning_scale=0.3)
+            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=0.3)
             # Get model prediction
             noise_pred = unet(
-            x=images_noised,
+            x=noisy_e,
             timesteps=timesteps,
             down_block_additional_residuals=down_block_res_samples,
             mid_block_additional_residual=mid_block_res_sample
@@ -251,19 +254,24 @@ for epoch in range(start_epoch, n_epochs):
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch["image"].to(device)
+            masks = batch['gt'].to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
-                    encoded_images = autoencoderkl.encoder(images)
-                    noise = torch.randn_like(encoded_images).to(device)
+                    #encoded_images = autoencoderkl.(images)
+                    e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                    
+                    noise = torch.randn_like(e).to(device)
+                    
                     timesteps = torch.randint(
-                        0, inferer.scheduler.num_train_timesteps, (encoded_images.shape[0],), device=encoded_images.device
+                        0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
                     ).long()
-                    noise_pred = inferer(
-                        inputs=encoded_images, 
-                        diffusion_model=unet, 
-                        noise=noise, 
-                        timesteps=timesteps,
-                        )
+                    
+                    noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
+
+                    down_block_res_samples, mid_block_res_sample = controlnet(
+                        x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=0.3
+                    )
+                    
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
@@ -271,7 +279,7 @@ for epoch in range(start_epoch, n_epochs):
             # break
         val_losses.append(val_epoch_loss / (step + 1))
 
-    if epoch % 50 == 0 and epoch > 0:
+    if epoch % 5 == 0 and epoch > 0:
         save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
 
 
