@@ -201,8 +201,9 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 n_epochs = 150
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
-    unet.train()
+    unet.eval()
     autoencoderkl.eval()
+    controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
     progress_bar.set_description(f"Epoch {epoch}")
@@ -228,7 +229,7 @@ for epoch in range(start_epoch, n_epochs):
             noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
 
             # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=0.3)
+            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
             # Get model prediction
             noise_pred = unet(
             x=noisy_e,
@@ -250,7 +251,9 @@ for epoch in range(start_epoch, n_epochs):
 
     if epoch % val_interval == 0 and epoch > 0:
         val_epochs.append(epoch)
+        autoencoderkl.eval()
         unet.eval()
+        controlnet.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
             images = batch["image"].to(device)
@@ -268,9 +271,7 @@ for epoch in range(start_epoch, n_epochs):
                     # noisy image
                     noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
                     # control embedding generation
-                    down_block_res_samples, mid_block_res_sample = controlnet(
-                        x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=0.3
-                    )
+                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
                     # noise prediction
                     noise_pred = unet(
                         x=noisy_e,
