@@ -260,19 +260,25 @@ for epoch in range(start_epoch, n_epochs):
                     e = autoencoderkl.encoder(images) * scale_factor
                     # noise generation
                     noise = torch.randn_like(e).to(device)
-                    # timestep generation
                     timesteps = torch.randint(
                         0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
                     ).long()
-                    noise = torch.randn_like(images).to(device)
-                    timesteps = torch.randint(
-                        0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
-                    ).long()
-                    noise_pred = inferer(inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps)
+            
+                    noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
+                    # Get controlnet output
+                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
+                    # Get model prediction
+                    noise_pred = unet(
+                                    x=noisy_e,
+                                    timesteps=timesteps,
+                                    down_block_additional_residuals=down_block_res_samples,
+                                    mid_block_additional_residual=mid_block_res_sample
+                    )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
             val_epoch_loss += val_loss.item()
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
+            print(val_loss)
             break
         val_losses.append(val_epoch_loss / (step + 1))
 
