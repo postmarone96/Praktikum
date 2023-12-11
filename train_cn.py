@@ -198,9 +198,11 @@ scale_factor = 1 / torch.std(z)
 inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
 # Training loop
-n_epochs = 150
+n_epochs = 1500
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
+    autoencoderkl.eval()
+    unet.eval()
     controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
@@ -217,7 +219,7 @@ for epoch in range(start_epoch, n_epochs):
             noise = torch.randn_like(e).to(device)
             # Create timesteps
             timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
+                0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
             ).long()
             
             noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
@@ -244,8 +246,6 @@ for epoch in range(start_epoch, n_epochs):
 
     if epoch % val_interval == 0 and epoch > 0:
         val_epochs.append(epoch)
-        autoencoderkl.eval()
-        unet.eval()
         controlnet.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
@@ -259,7 +259,7 @@ for epoch in range(start_epoch, n_epochs):
                     # noise generation
                     noise = torch.randn_like(e).to(device)
                     timesteps = torch.randint(
-                        0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
+                        0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
                     ).long()
             
                     noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
