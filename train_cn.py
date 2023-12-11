@@ -153,8 +153,8 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(128, 128, 512),
-    conditioning_embedding_in_channels = 1,
+    conditioning_embedding_num_channels=(16,),
+    conditioning_embedding_in_channels = 3,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
@@ -166,7 +166,7 @@ scheduler = DDPMScheduler(num_train_timesteps=1000)
 scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
-optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=2.5*10**(-float(args.lr)))
+optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=10**(-float(args.lr)))
 
 # Initialize from checkpoint
 start_epoch = 0
@@ -201,8 +201,6 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 n_epochs = 150
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
-    unet.eval()
-    autoencoderkl.eval()
     controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
@@ -213,9 +211,8 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
-                e = autoencoderkl.encoder(images) * scale_factor
-           # encoded_images = autoencoderkl.encoder(images)
-           # encoded_masks = mask_autoencoderkl.encoder(masks)
+                e = autoencoderkl.encoder(images)
+                m = mask_autoencoderkl.encoder(masks)
             # Generate random noise
             noise = torch.randn_like(e).to(device)
             # Create timesteps
@@ -225,7 +222,7 @@ for epoch in range(start_epoch, n_epochs):
             
             noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
             # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
+            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=m, conditioning_scale=1.0)
             # Get model prediction
             noise_pred = unet(
             x=noisy_e,
@@ -257,7 +254,8 @@ for epoch in range(start_epoch, n_epochs):
             with torch.no_grad():
                 with autocast(enabled=True):
                     #encoded_images = autoencoderkl.(images)
-                    e = autoencoderkl.encoder(images) * scale_factor
+                    e = autoencoderkl.encoder(images)
+                    m = mask_autoencoderkl.encoder(masks)
                     # noise generation
                     noise = torch.randn_like(e).to(device)
                     timesteps = torch.randint(
@@ -266,7 +264,7 @@ for epoch in range(start_epoch, n_epochs):
             
                     noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
                     # Get controlnet output
-                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=masks, conditioning_scale=1.0)
+                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=m, conditioning_scale=1.0)
                     # Get model prediction
                     noise_pred = unet(
                                     x=noisy_e,
