@@ -201,8 +201,8 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 n_epochs = 150
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
-    #unet.eval()
-    #autoencoderkl.eval()
+    unet.eval()
+    autoencoderkl.eval()
     controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
@@ -247,8 +247,8 @@ for epoch in range(start_epoch, n_epochs):
 
     if epoch % val_interval == 0 and epoch > 0:
         val_epochs.append(epoch)
-        #autoencoderkl.eval()
-        #unet.eval()
+        autoencoderkl.eval()
+        unet.eval()
         controlnet.eval()
         val_epoch_loss = 0
         for step, batch in enumerate(val_loader):
