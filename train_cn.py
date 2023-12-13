@@ -199,7 +199,7 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
 # Training loop
 n_epochs = 1500
-val_interval = 2
+val_interval = 5
 for epoch in range(start_epoch, n_epochs):
     autoencoderkl.eval()
     unet.eval()
