@@ -16,7 +16,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torchvision import transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
-from generative.inferers import DiffusionInferer, LatentDiffusionInferer
+from generative.inferers import ControlNetLatentDiffusionInferer, DiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import DiffusionModelUNet, ControlNet, AutoencoderKL
@@ -41,7 +41,7 @@ def print_with_timestamp(message):
     print(f"{current_time} - {message}")
 print_with_timestamp("Starting the script")
 
-def save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, filename):
+def save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, filename):
     checkpoint = {
         'epoch': epoch,
         'cn_state_dict': controlnet.module.state_dict(),
@@ -49,9 +49,12 @@ def save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, ep
         'optimizer_state_dict': optimizer.state_dict(),
         'scaler_state_dict':scaler.state_dict(),
         'scheduler_state_dict': scheduler.state_dict(),
+        'scheduler_lr_state_dict': scheduler_lr.state_dict(),
         'epoch_losses': epoch_losses,
         'val_losses': val_losses,
         'val_epochs': val_epochs,
+        'lr_rates': lr_rates,
+        
     }
     torch.save(checkpoint, filename)
 
@@ -167,6 +170,7 @@ scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=10**(-float(args.lr)))
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=15)
 
 # Initialize from checkpoint
 start_epoch = 0
@@ -178,15 +182,18 @@ if checkpoint_path:
     controlnet.module.load_state_dict(checkpoint['cn_state_dict'])
     unet.module.load_state_dict(checkpoint['unet_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+    scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
     scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
     epoch_losses = checkpoint['epoch_losses']
     val_losses = checkpoint['val_losses']
     val_epochs = checkpoint['val_epochs']
+    lr_rates = checkpoint['lr_rates']
     print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
     epoch_losses = []
     val_losses = []
     val_epochs = []
+    lr_rates = []
 
 # Inferer
 check_data = next(iter(train_loader))
@@ -195,14 +202,13 @@ with torch.no_grad():
         z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
 #print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
-inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+controlnet_inferer = ControlNetLatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+inferer = DiffusionInferer(scheduler)
 
 # Training loop
-n_epochs = 1500
+n_epochs = 150
 val_interval = 5
 for epoch in range(start_epoch, n_epochs):
-    autoencoderkl.eval()
-    unet.eval()
     controlnet.train()
     epoch_loss = 0
     progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
@@ -213,26 +219,21 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
-                e = autoencoderkl.encoder(images)
-                m = mask_autoencoderkl.encoder(masks)
+                m = mask_autoencoderkl.encode_stage_2_inputs(masks)
             # Generate random noise
-            noise = torch.randn_like(e).to(device)
-            # Create timesteps
+            noise = torch.randn_like(m).to(device)
             timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
+                0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
-            
-            noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
-            # Get controlnet output
-            down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=m, conditioning_scale=1.0)
-            # Get model prediction
-            noise_pred = unet(
-            x=noisy_e,
-            timesteps=timesteps,
-            down_block_additional_residuals=down_block_res_samples,
-            mid_block_additional_residual=mid_block_res_sample
+            noise_pred = controlnet_inferer(inputs=images,
+                                    autoencoder_model=autoencoderkl,
+                                    diffusion_model=unet,
+                                    controlnet=controlnet,
+                                    noise=noise,
+                                    timesteps=timesteps,
+                                    cn_cond=m,
             )
-            #loss
+
             loss = F.mse_loss(noise_pred.float(), noise.float())
 
         scaler.scale(loss).backward()
@@ -254,23 +255,20 @@ for epoch in range(start_epoch, n_epochs):
             with torch.no_grad():
                 with autocast(enabled=True):
                     #encoded_images = autoencoderkl.(images)
-                    e = autoencoderkl.encoder(images)
-                    m = mask_autoencoderkl.encoder(masks)
+                    m = mask_autoencoderkl.encode_stage_2_inputs(masks)
                     # noise generation
-                    noise = torch.randn_like(e).to(device)
+                    noise = torch.randn_like(m).to(device)
                     timesteps = torch.randint(
-                        0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
+                        0, controlnet_inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
                     ).long()
             
-                    noisy_e = scheduler.add_noise(original_samples=e, noise=noise, timesteps=timesteps)
-                    # Get controlnet output
-                    down_block_res_samples, mid_block_res_sample = controlnet(x=noisy_e, timesteps=timesteps, controlnet_cond=m, conditioning_scale=1.0)
-                    # Get model prediction
-                    noise_pred = unet(
-                                    x=noisy_e,
+                    noise_pred = controlnet_inferer(inputs=images,
+                                    autoencoder_model=autoencoderkl,
+                                    diffusion_model=unet,
+                                    controlnet=controlnet,
+                                    noise=noise,
                                     timesteps=timesteps,
-                                    down_block_additional_residuals=down_block_res_samples,
-                                    mid_block_additional_residual=mid_block_res_sample
+                                    cn_cond=m,
                     )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
@@ -278,10 +276,11 @@ for epoch in range(start_epoch, n_epochs):
             progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
             print(val_loss)
             break
+        scheduler_lr.step(val_epoch_loss / (step + 1)) 
         val_losses.append(val_epoch_loss / (step + 1))
 
     if epoch % 5 == 0 and epoch > 0:
-        save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_checkpoint_epoch_{epoch}.pth')
+        save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, f'cn_checkpoint_epoch_{epoch}.pth')
 
 
     if epoch > val_interval:
@@ -296,6 +295,13 @@ for epoch in range(start_epoch, n_epochs):
         ax1.plot(val_epochs, val_losses, 'b--', label="Validation")
         ax1.tick_params(axis='y', labelcolor=color)
 
+        # Twin axis for learning rates
+        ax2 = ax1.twinx()
+        color = 'tab:red'
+        ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
+        ax2.plot(val_epochs, lr_rates, color=color, label='Learning Rate')
+        ax2.tick_params(axis='y', labelcolor=color)
+        
         fig.tight_layout()
         fig.legend(loc="upper right", bbox_to_anchor=(0.8,0.9))
 
@@ -308,6 +314,6 @@ now = datetime.now()
 # Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")
 # Use date_time string in file name
-save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, epoch_losses, val_losses, val_epochs, f'cn_model_{date_time}.pth')
+save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, f'cn_model_{date_time}.pth')
 
 torch.cuda.empty_cache()
