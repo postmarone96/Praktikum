@@ -277,6 +277,8 @@ for epoch in range(start_epoch, n_epochs):
             print(val_loss)
             break
         scheduler_lr.step(val_epoch_loss / (step + 1)) 
+        lr_unet = optimizer.param_groups[0]['lr']
+        lr_rates.append(lr_unet)
         val_losses.append(val_epoch_loss / (step + 1))
 
     if epoch % 5 == 0 and epoch > 0:
@@ -301,7 +303,7 @@ for epoch in range(start_epoch, n_epochs):
         ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
         ax2.plot(val_epochs, lr_rates, color=color, label='Learning Rate')
         ax2.tick_params(axis='y', labelcolor=color)
-        
+
         fig.tight_layout()
         fig.legend(loc="upper right", bbox_to_anchor=(0.8,0.9))
 
