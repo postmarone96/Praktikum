@@ -202,7 +202,7 @@ with torch.no_grad():
         z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
 #print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
-controlnet_inferer = ControlNetDiffusionInferer(scheduler)
+controlnet_inferer = ControlNetlatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 inferer = DiffusionInferer(scheduler)
 
 # Training loop
