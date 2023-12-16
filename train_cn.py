@@ -220,7 +220,7 @@ for epoch in range(start_epoch, n_epochs):
         with autocast(enabled=True):
             with torch.no_grad():
                 e = autoencoderkl.encode_stage_2_inputs(images)
-                m = mask_autoencoderkl.encoder(masks)
+                m = mask_autoencoderkl.encode_stage_2_inputs(masks)
             # Generate random noise
             noise = torch.randn_like(m).to(device)
             timesteps = torch.randint(
@@ -255,7 +255,7 @@ for epoch in range(start_epoch, n_epochs):
             with torch.no_grad():
                 with autocast(enabled=True):
                     e = autoencoderkl.encode_stage_2_inputs(images)
-                    m = mask_autoencoderkl.encoder(masks)
+                    m = mask_autoencoderkl.encode_stage_2_inputs(masks)
                     # noise generation
                     noise = torch.randn_like(m).to(device)
                     timesteps = torch.randint(
