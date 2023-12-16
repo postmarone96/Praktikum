@@ -16,7 +16,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torchvision import transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
-from generative.inferers import ControlNetLatentDiffusionInferer, DiffusionInferer
+from generative.inferers import DiffusionInferer, ControlNetLatentDiffusionInferer
 from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import DiffusionModelUNet, ControlNet, AutoencoderKL
@@ -98,8 +98,8 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=8, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=16, persistent_workers=True)
+val_loader = DataLoader(validation_dataset, batch_size=16, shuffle=False, num_workers=16, persistent_workers=True)
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -157,7 +157,7 @@ controlnet = ControlNet(
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16,),
-    conditioning_embedding_in_channels = 3,
+    conditioning_embedding_in_channels = 1,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
@@ -202,7 +202,7 @@ with torch.no_grad():
         z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
 #print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
-controlnet_inferer = ControlNetLatentDiffusionInferer(scheduler, scale_factor=scale_factor)
+controlnet_inferer = ControlNetDiffusionInferer(scheduler)
 inferer = DiffusionInferer(scheduler)
 
 # Training loop
@@ -219,19 +219,19 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
-                m = mask_autoencoderkl.encode_stage_2_inputs(masks)
+                #e = autoencoderkl.encoder(images)
+                m = mask_autoencoderkl.encoder(masks)
             # Generate random noise
             noise = torch.randn_like(m).to(device)
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
             noise_pred = controlnet_inferer(inputs=images,
-                                    autoencoder_model=autoencoderkl,
                                     diffusion_model=unet,
                                     controlnet=controlnet,
                                     noise=noise,
                                     timesteps=timesteps,
-                                    cn_cond=m,
+                                    cn_cond=masks,
             )
 
             loss = F.mse_loss(noise_pred.float(), noise.float())
@@ -254,8 +254,8 @@ for epoch in range(start_epoch, n_epochs):
             masks = batch["gt"].to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
-                    #encoded_images = autoencoderkl.(images)
-                    m = mask_autoencoderkl.encode_stage_2_inputs(masks)
+                    #e = autoencoderkl.encoder(images)
+                    m = mask_autoencoderkl.encoder(masks)
                     # noise generation
                     noise = torch.randn_like(m).to(device)
                     timesteps = torch.randint(
@@ -263,12 +263,11 @@ for epoch in range(start_epoch, n_epochs):
                     ).long()
             
                     noise_pred = controlnet_inferer(inputs=images,
-                                    autoencoder_model=autoencoderkl,
                                     diffusion_model=unet,
                                     controlnet=controlnet,
                                     noise=noise,
                                     timesteps=timesteps,
-                                    cn_cond=m,
+                                    cn_cond=masks,
                     )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
