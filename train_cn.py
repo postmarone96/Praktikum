@@ -227,6 +227,7 @@ for epoch in range(start_epoch, n_epochs):
                 0, inferer.scheduler.num_train_timesteps, (images.shape[0],), device=images.device
             ).long()
             noise_pred = controlnet_inferer(inputs=images,
+                                    autoencoder_model=autoencoderkl,
                                     diffusion_model=unet,
                                     controlnet=controlnet,
                                     noise=noise,
@@ -264,6 +265,7 @@ for epoch in range(start_epoch, n_epochs):
             
                     noise_pred = controlnet_inferer(inputs=images,
                                     diffusion_model=unet,
+                                    autoencoder_model=autoencoderkl,
                                     controlnet=controlnet,
                                     noise=noise,
                                     timesteps=timesteps,
