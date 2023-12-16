@@ -170,7 +170,7 @@ scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=10**(-float(args.lr)))
-scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=15)
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=3)
 
 # Initialize from checkpoint
 start_epoch = 0
