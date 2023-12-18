@@ -120,7 +120,7 @@ else:
 autoencoderkl = autoencoderkl.to(device)
 
 # Mask Autoencoder
-mask_autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+mask_autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 mask_path = glob.glob('mask_model_*.pth')
 mask_model = torch.load(mask_path[0])
 if list(mask_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
