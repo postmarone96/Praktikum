@@ -106,7 +106,7 @@ print_with_timestamp("Start setting")
 unet = DiffusionModelUNet(
         spatial_dims=2,
         in_channels=3,
-        out_channels=1,
+        out_channels=2,
         num_channels=(64, 64, 64),
         attention_levels=(False, False, True),
         num_res_blocks=1,
@@ -173,9 +173,8 @@ for epoch in range(start_epoch, n_epochs):
         scaler.step(optimizer)
         scaler.update()
         epoch_loss += loss.item()
-        epoch_losses.append(epoch_loss)
 
-    epoch_loss_list.append(epoch_loss / (step + 1))
+    epoch_losses.append(epoch_loss / (step + 1))
     if (epoch) % val_interval == 0:
         unet.eval()
         val_epochs.append(epoch)
