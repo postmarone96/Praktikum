@@ -116,7 +116,7 @@ if [ "$MODEL" = "vae" ]; then
     cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
     python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
 
-elif [ "$MODEL" = "maks" ]; then
+elif [ "$MODEL" = "mask" ]; then
     echo "training mask"
     if [ -e "$MASK_CHECKPOINT" ]; then
         cp $MASK_CHECKPOINT $SCRATCH_DIR/
