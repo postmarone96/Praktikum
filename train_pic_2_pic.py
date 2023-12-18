@@ -29,7 +29,6 @@ torch.cuda.empty_cache()
 # parser
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--data_size", type=str, required=True)
 parser.add_argument("--job", type=str, required=True)
 parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
@@ -153,8 +152,8 @@ for epoch in range(start_epoch, n_epochs):
     unet.train()
     epoch_loss = 0
     for step, data in enumerate(train_loader):
-        images = data["image"].to(device)
-        seg = data["gt"].to(device)  # this is the ground truth segmentation
+        seg = data["image"].to(device)
+        images = data["gt"].to(device)  # this is the ground truth segmentation
         optimizer.zero_grad(set_to_none=True)
         timesteps = torch.randint(0, 1000, (len(images),)).to(device)  # pick a random time step t
 
@@ -182,8 +181,8 @@ for epoch in range(start_epoch, n_epochs):
         val_epochs.append(epoch)
         val_epoch_loss = 0
         for step, data_val in enumerate(val_loader):
-            images = data_val["image"].to(device)
-            seg = data_val["gt"].to(device)  # this is the ground truth segmentation
+            seg = data_val["image"].to(device)
+            images = data_val["gt"].to(device)  # this is the ground truth segmentation
             timesteps = torch.randint(0, 1000, (len(images),)).to(device)
             with torch.no_grad():
                 with autocast(enabled=True):

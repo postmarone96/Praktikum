@@ -88,7 +88,7 @@ if [ ! -e "$DATASET" ]; then
     cp -r "$SRC_DIR/raw" "$SCRATCH_DIR"
     cp -r "$SRC_DIR/gt" "$SCRATCH_DIR"
     cp $HOME/Praktikum/mask_creator.py $SCRATCH_DIR/
-    python -u mask_creator.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
+    python -u mask_creator.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE
     echo "mask_creator completed"
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
@@ -102,7 +102,7 @@ if [ -e "$LDM_CHECKPOINT" ]; then
 fi 
 cp $AE $SCRATCH_DIR/
 cp $HOME/Praktikum/train_pic_2_pic.py $SCRATCH_DIR/
-python -u train_pic_2_pic.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE --job $SLURM_JOB_ID
+python -u train_pic_2_pic.py --output_file $OUTPUTFILE --lr $LR --job $SLURM_JOB_ID
 
 cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
