@@ -225,7 +225,7 @@ for epoch in range(start_epoch, n_epochs):
                 e = autoencoderkl.encoder(images)
                 m = mask_autoencoderkl.encoder(masks)
             # Generate random noise
-            noise = torch.randn_like(m).to(device)
+            noise = torch.randn_like(e).to(device)
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (m.shape[0],), device=m.device
             ).long()
