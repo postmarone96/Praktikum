@@ -68,9 +68,16 @@ class NiftiHDF5Dataset(Dataset):
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            gt_data = f['gt'][idx]
+            bg = f['bg'][idx]
+            raw = f['raw'][idx]
+            gt = f['gt'][idx]
+            chann_1 = torch.tensor(bg)
+            chann_2 = torch.tensor(raw)
+            mask_1 = chann_1 > 0.2
+            mask_2 = chann_2 > 0.2
+            mask_3 = torch.tensor(gt)
 
-        return torch.tensor(gt_data).unsqueeze(0)
+        return torch.stack([mask_1, mask_2, mask_3], dim=0)
 
 vae_best_val_loss = float('inf')
 
@@ -100,8 +107,8 @@ print_with_timestamp("AutoEncoder setup")
 # Before the training loop:
 start_epoch = 0
 checkpoint_path = glob.glob('mask_checkpoint_epoch_*.pth')
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=3, out_channels=3)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(10**(-float(args.lr)))/2)
 scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min', factor=0.5, patience=20)

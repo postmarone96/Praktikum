@@ -100,7 +100,6 @@ if [ -e "$LDM_CHECKPOINT" ]; then
     cp $LDM_CHECKPOINT $SCRATCH_DIR/
     echo "ldm_checkpoint copied successfully."
 fi 
-cp $AE $SCRATCH_DIR/
 cp $HOME/Praktikum/train_pic_2_pic.py $SCRATCH_DIR/
 python -u train_pic_2_pic.py --output_file $OUTPUTFILE --lr $LR --job $SLURM_JOB_ID
 

@@ -75,9 +75,12 @@ class NiftiHDF5Dataset(Dataset):
             
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
+        mask_1 = chann_1 > 0.2
+        mask_2 = chann_2 > 0.2
+        mask_3 = torch.tensor(gt)
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2], dim=0)
-        combined['gt'] = torch.tensor(gt).unsqueeze(0)
+        combined['gt'] = torch.stack([mask_1, mask_2, mask_3], dim=0)
 
         return combined
 
