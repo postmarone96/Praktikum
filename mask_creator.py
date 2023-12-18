@@ -12,8 +12,7 @@ parser.add_argument("--output_file", type=str, required=True)
 args = parser.parse_args()
 
 class NiftiPreprocessor:
-    def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
-        self.data_size = data_size
+    def __init__(self, raw_dir, bg_dir, gt_dir, output_file):
         self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
         self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
         self.gt = sorted([os.path.join(gt_dir, f) for f in os.listdir(gt_dir) if f.endswith('.nii.gz')])
@@ -93,5 +92,5 @@ preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
                                 bg_dir=os.path.join(args.data_path, 'bg'),
                                 gt_dir=os.path.join(args.data_path, 'gt'), 
                                 output_file=args.output_file,
-                                data_size=args.data_size)
+                                )
 preprocessor.process_and_save()
