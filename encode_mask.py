@@ -71,13 +71,13 @@ class NiftiHDF5Dataset(Dataset):
             bg = f['bg'][idx]
             raw = f['raw'][idx]
             gt = f['gt'][idx]
+            bg = (bg > 0.2).astype(np.float32)
+            raw = (raw > 0.2).astype(np.float32)
             chann_1 = torch.tensor(bg)
             chann_2 = torch.tensor(raw)
-            mask_1 = chann_1 > 0.2
-            mask_2 = chann_2 > 0.2
             # mask_3 = torch.tensor(gt)
 
-        return torch.stack([mask_1, mask_2], dim=0)
+        return torch.stack([chann_1, chann_2], dim=0)
 
 vae_best_val_loss = float('inf')
 
