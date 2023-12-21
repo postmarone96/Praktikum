@@ -162,7 +162,7 @@ controlnet = ControlNet(
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16,),
-    conditioning_embedding_in_channels = 2,
+    conditioning_embedding_in_channels = 3,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
