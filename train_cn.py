@@ -75,12 +75,14 @@ class NiftiHDF5Dataset(Dataset):
             
         chann_1 = torch.tensor(bg)
         chann_2 = torch.tensor(raw)
-        mask_1 = chann_1 > 0.2
-        mask_2 = chann_2 > 0.2
-        mask_3 = torch.tensor(gt)
+        bg = (bg > 0.2).astype(np.float32)
+        raw = (raw > 0.2).astype(np.float32)
+        mask_1 = torch.tensor(bg)
+        mask_2 = torch.tensor(raw)
+        #mask_3 = torch.tensor(gt)
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2], dim=0)
-        combined['gt'] = torch.stack([mask_1, mask_2, mask_3], dim=0)
+        combined['gt'] = torch.stack([mask_1, mask_2], dim=0)
 
         return combined
 
@@ -120,7 +122,7 @@ else:
 autoencoderkl = autoencoderkl.to(device)
 
 # Mask Autoencoder
-mask_autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=3, out_channels=3, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+mask_autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 mask_path = glob.glob('mask_model_*.pth')
 mask_model = torch.load(mask_path[0])
 if list(mask_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
@@ -160,7 +162,7 @@ controlnet = ControlNet(
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16,),
-    conditioning_embedding_in_channels = 3,
+    conditioning_embedding_in_channels = 2,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
