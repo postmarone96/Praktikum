@@ -161,8 +161,8 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_res_blocks=2,
     num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(16,),
-    conditioning_embedding_in_channels = 3,
+    conditioning_embedding_num_channels=(32, 64, 128),
+    conditioning_embedding_in_channels = 2,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
@@ -175,7 +175,7 @@ scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=10**(-float(args.lr)))
-scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=3)
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
 
 # Initialize from checkpoint
 start_epoch = 0
@@ -212,7 +212,7 @@ inferer = DiffusionInferer(scheduler)
 
 # Training loop
 n_epochs = 150
-val_interval = 5
+val_interval = 2
 for epoch in range(start_epoch, n_epochs):
     controlnet.train()
     epoch_loss = 0
@@ -224,19 +224,19 @@ for epoch in range(start_epoch, n_epochs):
         optimizer.zero_grad(set_to_none=True)
         with autocast(enabled=True):
             with torch.no_grad():
-                e = autoencoderkl.encoder(images)
-                m = mask_autoencoderkl.encoder(masks)
+                e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                # m = mask_autoencoderkl.encoder(masks)
             # Generate random noise
             noise = torch.randn_like(e).to(device)
             timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (m.shape[0],), device=m.device
+                0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
             ).long()
             noise_pred = controlnet_inferer(inputs=e,
                                     diffusion_model=unet,
                                     controlnet=controlnet,
                                     noise=noise,
                                     timesteps=timesteps,
-                                    cn_cond=m,
+                                    cn_cond=masks,
             )
 
             loss = F.mse_loss(noise_pred.float(), noise.float())
@@ -259,12 +259,12 @@ for epoch in range(start_epoch, n_epochs):
             masks = batch["gt"].to(device)
             with torch.no_grad():
                 with autocast(enabled=True):
-                    e = autoencoderkl.encoder(images)
-                    m = mask_autoencoderkl.encoder(masks)
+                    e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                    #m = mask_autoencoderkl.encoder(masks)
                     # noise generation
-                    noise = torch.randn_like(m).to(device)
+                    noise = torch.randn_like(e).to(device)
                     timesteps = torch.randint(
-                        0, controlnet_inferer.scheduler.num_train_timesteps, (m.shape[0],), device=m.device
+                        0, controlnet_inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
                     ).long()
             
                     noise_pred = controlnet_inferer(inputs=e,
@@ -272,7 +272,7 @@ for epoch in range(start_epoch, n_epochs):
                                     controlnet=controlnet,
                                     noise=noise,
                                     timesteps=timesteps,
-                                    cn_cond=m,
+                                    cn_cond=masks,
                     )
                     val_loss = F.mse_loss(noise_pred.float(), noise.float())
 
