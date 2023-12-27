@@ -120,8 +120,8 @@ print_with_timestamp("AutoEncoder setup")
 # Before the training loop:
 start_epoch = 0
 checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=number_of_channels, out_channels=number_of_channels, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=number_of_channels, out_channels=number_of_channels)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 256, 512), latent_channels=4, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=2, out_channels=2)
 optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
 optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(10**(-float(args.lr)))/2)
 scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min', factor=0.5, patience=20)
@@ -167,7 +167,7 @@ perceptual_weight = 0.001
 scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
 kl_weight = 1e-6
-n_epochs = 100
+n_epochs = 200
 val_interval = 2
 autoencoder_warm_up_n_epochs = -1
 num_example_images = 4
