@@ -24,8 +24,8 @@ class NiftiPreprocessor:
         # Assuming equal number of image and annotation files
         assert len(self.raw) == len(self.bg), "Mismatch in number files"
         if self.data_size == 'xs':
-            assert len(self.raw) == len(self.gt), "Mismatch in number gt files"
-
+            assert len(self.raw) == len(self.gt), "Mismatch in number gt files "
+            
         buffer_raw = []
         buffer_bg = []
         if self.data_size == 'xs':
