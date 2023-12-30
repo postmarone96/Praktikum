@@ -136,12 +136,12 @@ mask_autoencoderkl = mask_autoencoderkl.to(device)
 # UNET
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
-    num_res_blocks=2,
-    num_channels=(128, 256, 512),
-    attention_levels=(False, True, True),
-    num_head_channels=(0, 256, 512),
+    in_channels=4,
+    out_channels=4,
+    num_res_blocks=4,
+    num_channels=(128, 256, 512, 1024),
+    attention_levels=(False, True, True, True),
+    num_head_channels=(0, 256, 512, 1024),
 )
 ldm_path = glob.glob('ldm_model_*.pth')
 ldm_model = torch.load(ldm_path[0])
@@ -156,12 +156,12 @@ unet = unet.to(device)
 # ControlNet
 controlnet = ControlNet(
     spatial_dims=2,
-    in_channels=3,
-    num_channels=(128, 256, 512),
-    attention_levels=(False, True, True),
-    num_res_blocks=2,
-    num_head_channels=(0, 256, 512),
-    conditioning_embedding_num_channels=(32, 64, 128),
+    in_channels=4,
+    num_res_blocks=4,
+    num_channels=(128, 256, 512, 1024),
+    attention_levels=(False, True, True, True),
+    num_head_channels=(0, 256, 512, 1024),
+    conditioning_embedding_num_channels=(16, 32, 64),
     conditioning_embedding_in_channels = 2,
 )
 # Copy weights from the DM to the controlnet
@@ -211,7 +211,7 @@ controlnet_inferer = ControlNetDiffusionInferer(scheduler)
 inferer = DiffusionInferer(scheduler)
 
 # Training loop
-n_epochs = 150
+n_epochs = 20
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
     controlnet.train()
@@ -225,8 +225,6 @@ for epoch in range(start_epoch, n_epochs):
         with autocast(enabled=True):
             with torch.no_grad():
                 e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
-                # m = mask_autoencoderkl.encoder(masks)
-            # Generate random noise
             noise = torch.randn_like(e).to(device)
             timesteps = torch.randint(
                 0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
@@ -260,8 +258,6 @@ for epoch in range(start_epoch, n_epochs):
             with torch.no_grad():
                 with autocast(enabled=True):
                     e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
-                    #m = mask_autoencoderkl.encoder(masks)
-                    # noise generation
                     noise = torch.randn_like(e).to(device)
                     timesteps = torch.randint(
                         0, controlnet_inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
@@ -287,7 +283,6 @@ for epoch in range(start_epoch, n_epochs):
 
     if epoch % 5 == 0 and epoch > 0:
         save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, f'cn_checkpoint_epoch_{epoch}.pth')
-
 
     if epoch > val_interval:
         fig, ax1 = plt.subplots(figsize=(10, 5))
