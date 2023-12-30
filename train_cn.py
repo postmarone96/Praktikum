@@ -199,7 +199,7 @@ controlnet_inferer = ControlNetDiffusionInferer(scheduler)
 inferer = DiffusionInferer(scheduler)
 
 # Training loop
-n_epochs = 20
+n_epochs = 200
 val_interval = 2
 for epoch in range(start_epoch, n_epochs):
     controlnet.train()
