@@ -110,7 +110,7 @@ print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
 # AutoencoderKL
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 256, 512), latent_channels=4, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
@@ -120,18 +120,6 @@ else:
     new_state_dict = vae_model['autoencoder_state_dict']
     autoencoderkl.load_state_dict(new_state_dict)
 autoencoderkl = autoencoderkl.to(device)
-
-# Mask Autoencoder
-mask_autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-mask_path = glob.glob('mask_model_*.pth')
-mask_model = torch.load(mask_path[0])
-if list(mask_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
-    new_state_dict = {k[len("module."):]: v for k, v in mask_model['autoencoder_state_dict'].items()}
-    mask_autoencoderkl.load_state_dict(new_state_dict)
-else:
-    new_state_dict = mask_model['autoencoder_state_dict']
-    mask_autoencoderkl.load_state_dict(new_state_dict)
-mask_autoencoderkl = mask_autoencoderkl.to(device)
 
 # UNET
 unet = DiffusionModelUNet(
