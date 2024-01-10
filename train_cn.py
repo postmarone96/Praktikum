@@ -79,10 +79,10 @@ class NiftiHDF5Dataset(Dataset):
         raw = (raw > 0.2).astype(np.float32)
         mask_1 = torch.tensor(bg)
         mask_2 = torch.tensor(raw)
-        #mask_3 = torch.tensor(gt)
+        mask_3 = torch.tensor(gt)
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2], dim=0)
-        combined['gt'] = torch.stack([mask_1, mask_2], dim=0)
+        combined['gt'] = mask_3 #torch.stack([mask_1, mask_2], dim=0)
 
         return combined
 
@@ -110,7 +110,7 @@ print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
 # AutoencoderKL
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 256, 512), latent_channels=4, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
@@ -124,12 +124,12 @@ autoencoderkl = autoencoderkl.to(device)
 # UNET
 unet = DiffusionModelUNet(
     spatial_dims=2,
-    in_channels=4,
-    out_channels=4,
-    num_res_blocks=4,
-    num_channels=(128, 256, 512, 1024),
-    attention_levels=(False, True, True, True),
-    num_head_channels=(0, 256, 512, 1024),
+    in_channels=3,
+    out_channels=3,
+    num_res_blocks=2,
+    num_channels=(128, 256, 512),
+    attention_levels=(False, True, True),
+    num_head_channels=(0, 256, 512),
 )
 ldm_path = glob.glob('ldm_model_*.pth')
 ldm_model = torch.load(ldm_path[0])
@@ -144,13 +144,13 @@ unet = unet.to(device)
 # ControlNet
 controlnet = ControlNet(
     spatial_dims=2,
-    in_channels=4,
-    num_res_blocks=4,
-    num_channels=(128, 256, 512, 1024),
-    attention_levels=(False, True, True, True),
-    num_head_channels=(0, 256, 512, 1024),
+    in_channels=3,
+    num_res_blocks=2,
+    num_channels=(128, 256, 512),
+    attention_levels=(False, True, True),
+    num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16, 32, 64),
-    conditioning_embedding_in_channels = 2,
+    conditioning_embedding_in_channels = 1,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
