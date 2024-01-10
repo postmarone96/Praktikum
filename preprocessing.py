@@ -67,17 +67,17 @@ class NiftiPreprocessor:
         img = nib.load(nii_path)
         image_data = img.get_fdata()
         slices_xy = np.moveaxis(image_data, -1, 0)
-        slices_zy = np.moveaxis(image_data, 0, 1)
-        slices_xz = np.moveaxis(image_data, 0, 2)
-        return self.process_slices(slices_xy) + self.process_slices(slices_zy) + self.process_slices(slices_xz)
+        # slices_zy = np.moveaxis(image_data, 0, 1)
+        # slices_xz = np.moveaxis(image_data, 0, 2)
+        return self.process_slices(slices_xy) # + self.process_slices(slices_zy) + self.process_slices(slices_xz)
 
     def process_single_nifti_for_masks(self, nii_path):
         img = nib.load(nii_path)
         image_data = img.get_fdata()
         slices_xy = np.moveaxis(image_data, -1, 0)
-        slices_zy = np.moveaxis(image_data, 0, 1)
-        slices_xz = np.moveaxis(image_data, 0, 2)
-        return self.process_slices_for_masks(slices_xy) + self.process_slices_for_masks(slices_zy) + self.process_slices_for_masks(slices_xz)
+        #slices_zy = np.moveaxis(image_data, 0, 1)
+        #slices_xz = np.moveaxis(image_data, 0, 2)
+        return self.process_slices_for_masks(slices_xy) #+ self.process_slices_for_masks(slices_zy) + self.process_slices_for_masks(slices_xz)
 
     def process_slices(self, slices):
         buffer = []
