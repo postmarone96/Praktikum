@@ -79,7 +79,7 @@ class NiftiHDF5Dataset(Dataset):
         raw = (raw > 0.2).astype(np.float32)
         mask_1 = torch.tensor(bg)
         mask_2 = torch.tensor(raw)
-        mask_3 = torch.tensor(gt)
+        mask_3 = torch.tensor(gt).unsqueeze(0)
         combined = {}
         combined['image'] = torch.stack([chann_1, chann_2], dim=0)
         combined['gt'] = mask_3 #torch.stack([mask_1, mask_2], dim=0)
