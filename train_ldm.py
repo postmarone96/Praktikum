@@ -123,9 +123,9 @@ unet = DiffusionModelUNet(
     in_channels=3,
     out_channels=3,
     num_res_blocks=2,
-    num_channels=(64, 128, 256),
-    attention_levels=(False, False, True),
-    num_head_channels=(0, 0, 256),
+    num_channels=(128, 256, 512),
+    attention_levels=(True, True, True),
+    num_head_channels=(128, 256, 512),
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
@@ -287,7 +287,7 @@ data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
     scheduler.set_timesteps(num_inference_steps=1000)
-    noise = torch.randn((1, 4, 64, 64))
+    noise = torch.randn((1, 3, 64, 64))
     noise = noise.to(device)
     
     with torch.no_grad():
