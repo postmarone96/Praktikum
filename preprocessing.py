@@ -58,7 +58,7 @@ class NiftiPreprocessor:
                     buffer_gt.extend(gt_slices)
 
                 # Save buffer if it's big enough
-                if len(buffer_raw) >= 30000:
+                if len(buffer_raw) >= 1500:
                     self.save_buffer_to_dataset(dset_raw, buffer_raw)
                     self.save_buffer_to_dataset(dset_bg, buffer_bg)
                     if self.data_size == 'xs':
