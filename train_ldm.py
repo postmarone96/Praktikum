@@ -123,9 +123,9 @@ unet = DiffusionModelUNet(
     in_channels=3,
     out_channels=3,
     num_res_blocks=2,
-    num_channels=(128, 256, 512),
-    attention_levels=(True, True, True),
-    num_head_channels=(128, 256, 512),
+    num_channels=(16, 32, 64, 128, 256, 512),
+    attention_levels=(False, False, False, True, True, True),
+    num_head_channels=(0, 0, 0, 128, 256, 512),
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
