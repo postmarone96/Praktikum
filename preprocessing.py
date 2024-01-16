@@ -3,6 +3,7 @@ import numpy as np
 import nibabel as nib
 import h5py
 import argparse
+import gc
 
 # parser
 parser = argparse.ArgumentParser()
@@ -49,32 +50,23 @@ class NiftiPreprocessor:
 
             for raw_path, bg_path in zip(self.raw, self.bg):
                 raw_slices, valid_indices = self.process_single_nifti(raw_path, percentile_threshold)
-                buffer_raw.extend(raw_slices)
+                self.save_slices_to_dataset(dset_raw, raw_slices)
+                gc.collect()  # Trigger garbage collection
+
                 bg_slices = self.process_single_nifti_using_indices(bg_path, valid_indices)
-                buffer_bg.extend(bg_slices)
+                self.save_slices_to_dataset(dset_bg, bg_slices)
+                gc.collect()  # Trigger garbage collection
+
                 if self.data_size == 'xs':
-                    gt_path = self.gt[self.raw.index(raw_path)]  # Match raw and gt files
+                    gt_path = self.gt[self.raw.index(raw_path)]
                     gt_slices = self.process_mask_nifti_using_indices(gt_path, valid_indices)
-                    buffer_gt.extend(gt_slices)
+                    self.save_slices_to_dataset(dset_gt, gt_slices)
+                    gc.collect()
 
-                # Save buffer if it's big enough
-                if len(buffer_raw) >= 1500:
-                    self.save_buffer_to_dataset(dset_raw, buffer_raw)
-                    self.save_buffer_to_dataset(dset_bg, buffer_bg)
-                    if self.data_size == 'xs':
-                        self.save_buffer_to_dataset(dset_gt, buffer_gt)
-                    buffer_raw.clear()
-                    buffer_bg.clear()
-                    if self.data_size == 'xs':
-                        buffer_gt.clear()
-
-            # If there's any remaining data in the buffers, save them
-            if buffer_raw:
-                self.save_buffer_to_dataset(dset_raw, buffer_raw)
-            if buffer_bg:
-                self.save_buffer_to_dataset(dset_bg, buffer_bg)
-            if self.data_size == 'xs' and buffer_gt:
-                self.save_buffer_to_dataset(dset_gt, buffer_gt)
+        def save_slices_to_dataset(self, dataset, slices):
+            current_length = dataset.shape[0]
+            dataset.resize((current_length + len(slices), 256, 256))
+            dataset[current_length:] = np.array(slices)
 
     def process_single_nifti_using_indices(self, nii_path, valid_indices):
         img = nib.load(nii_path)
