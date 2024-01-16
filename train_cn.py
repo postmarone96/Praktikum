@@ -73,16 +73,17 @@ class NiftiHDF5Dataset(Dataset):
             raw = f['raw'][idx]
             gt = f['gt'][idx]
             
-        chann_1 = torch.tensor(bg)
-        chann_2 = torch.tensor(raw)
-        bg = (bg > 0.2).astype(np.float32)
-        raw = (raw > 0.2).astype(np.float32)
-        mask_1 = torch.tensor(bg)
-        mask_2 = torch.tensor(raw)
-        mask_3 = torch.tensor(gt).unsqueeze(0)
+        bg = torch.tensor(bg)
+        raw = torch.tensor(raw).unsqueeze(0)
+        gt = torch.tensor(gt)
+        #bg = (bg > 0.2).astype(np.float32)
+        #raw = (raw > 0.2).astype(np.float32)
+        #mask_1 = torch.tensor(bg)
+        #mask_2 = torch.tensor(raw)
+        #mask_3 = torch.tensor(gt).unsqueeze(0)
         combined = {}
-        combined['image'] = torch.stack([chann_1, chann_2], dim=0)
-        combined['gt'] = mask_3 #torch.stack([mask_1, mask_2], dim=0)
+        combined['image'] = raw
+        combined['gt'] = torch.stack([bg, gt], dim=0) #torch.stack([mask_1, mask_2], dim=0)
 
         return combined
 
@@ -110,7 +111,7 @@ print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
 # AutoencoderKL
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
@@ -150,7 +151,7 @@ controlnet = ControlNet(
     attention_levels=(False, True, True),
     num_head_channels=(0, 256, 512),
     conditioning_embedding_num_channels=(16, 32, 64),
-    conditioning_embedding_in_channels = 1,
+    conditioning_embedding_in_channels = 2,
 )
 # Copy weights from the DM to the controlnet
 controlnet.load_state_dict(unet.module.state_dict(), strict=False)
@@ -163,7 +164,7 @@ scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=10**(-float(args.lr)))
-scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
+scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=40)
 
 # Initialize from checkpoint
 start_epoch = 0
