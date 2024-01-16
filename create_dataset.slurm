@@ -23,6 +23,8 @@ conda activate myenv
 echo "env activated"
 
 
-python -u create_dataset.py
+##python -u create_dataset.py
+
+python -u preprocessing.py --data_path $SLURM_SUBMIT_DIR/train_xl/data --output_file $SLURM_SUBMIT_DIR/dataset.hdf5 --data_size xl
 
 rm -rf "$SCRATCH_DIR"
