@@ -67,7 +67,7 @@ class NiftiPreprocessor:
         current_length = dataset.shape[0]
         dataset.resize((current_length + len(slices), 256, 256))
         dataset[current_length:] = np.array(slices)
-        print(Total dataset size: {dataset.shape[0]} slices.")
+        print(f"Total dataset size: {dataset.shape[0]} slices.")
 
     def process_single_nifti_using_indices(self, nii_path, valid_indices):
         img = nib.load(nii_path)
