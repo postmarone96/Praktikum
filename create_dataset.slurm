@@ -14,7 +14,7 @@
 SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
 mkdir -p "$SCRATCH_DIR"
 
-cp $HOME/Praktikum/create_dataset.py $SCRATCH_DIR/
+cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
 
 cd $SCRATCH_DIR
 
