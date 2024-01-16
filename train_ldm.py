@@ -55,9 +55,6 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
     }
     torch.save(checkpoint, filename)
 
-#if args.data_size == 'xs':
-#    number_of_channels = 3
-#else:
 number_of_channels = 2
 
 print_with_timestamp("Defining NiftiDataset class")
@@ -87,7 +84,7 @@ class NiftiHDF5Dataset(Dataset):
         if self.number_of_channels == 3:
             combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
         else: 
-            combined = torch.stack([chann_1, chann_2], dim=0)
+            combined = chann_1.unsqueeze(0) #torch.stack([chann_1, chann_2], dim=0)
 
         return combined
 
@@ -123,15 +120,15 @@ unet = DiffusionModelUNet(
     in_channels=3,
     out_channels=3,
     num_res_blocks=2,
-    num_channels=(16, 32, 64, 128, 256, 512),
-    attention_levels=(False, False, False, True, True, True),
-    num_head_channels=(0, 0, 0, 128, 256, 512),
+    num_channels=(32, 64, 128, 256, 512),
+    attention_levels=(False, False, True, True, True),
+    num_head_channels=(0, 0, 128, 256, 512),
 )
 optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
 scaler = GradScaler()
 
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=2, out_channels=2, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
+autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
 vae_path = glob.glob('vae_model_*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):

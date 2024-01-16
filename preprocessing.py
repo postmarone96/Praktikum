@@ -63,10 +63,10 @@ class NiftiPreprocessor:
                     self.save_slices_to_dataset(dset_gt, gt_slices)
                     gc.collect()
 
-        def save_slices_to_dataset(self, dataset, slices):
-            current_length = dataset.shape[0]
-            dataset.resize((current_length + len(slices), 256, 256))
-            dataset[current_length:] = np.array(slices)
+    def save_slices_to_dataset(self, dataset, slices):
+        current_length = dataset.shape[0]
+        dataset.resize((current_length + len(slices), 256, 256))
+        dataset[current_length:] = np.array(slices)
 
     def process_single_nifti_using_indices(self, nii_path, valid_indices):
         img = nib.load(nii_path)
@@ -104,11 +104,6 @@ class NiftiPreprocessor:
             img_cropped = (img_cropped > 0.5).astype(np.float32)
             buffer.append(img_cropped)
         return buffer
-
-    def save_buffer_to_dataset(self, dataset, buffer):
-        current_length = dataset.shape[0]
-        dataset.resize((current_length + len(buffer), 256, 256))
-        dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 
     def process_single_nifti(self, nii_path, percentile_threshold):
         img = nib.load(nii_path)
