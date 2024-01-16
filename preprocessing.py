@@ -24,13 +24,17 @@ class NiftiPreprocessor:
         print(f"Found {len(self.raw)} raw files, {len(self.bg)} background files.")
 
     def calculate_percentile_threshold(self, data_paths):
-        all_intensities = []
+        percentiles = []
         for nii_path in data_paths:
             img = nib.load(nii_path)
             image_data = img.get_fdata()
-            all_intensities.extend(image_data.flatten())
-            print(f"Calculated percentile threshold: {np.percentile(all_intensities, 25)}")
-        return np.percentile(all_intensities, 25)
+            percentile_25 = np.percentile(image_data, 25)
+            percentiles.append(percentile_25)
+            print(f"Calculated 25th percentile for {nii_path}: {percentile_25}")
+
+        overall_percentile = np.median(percentiles)
+        print(f"Overall 25th percentile threshold: {overall_percentile}")
+        return overall_percentile
 
     def process_and_save(self):
         
