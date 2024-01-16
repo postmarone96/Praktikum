@@ -14,19 +14,22 @@ args = parser.parse_args()
 
 class NiftiPreprocessor:
     def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
+        print("Initializing NiftiPreprocessor")
         self.data_size = data_size
         self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
         self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
         if self.data_size == 'xs':
             self.gt = sorted([os.path.join(gt_dir, f) for f in os.listdir(gt_dir) if f.endswith('.nii.gz')])
         self.output_file = output_file
-        
+        print(f"Found {len(self.raw)} raw files, {len(self.bg)} background files.")
+
     def calculate_percentile_threshold(self, data_paths):
         all_intensities = []
         for nii_path in data_paths:
             img = nib.load(nii_path)
             image_data = img.get_fdata()
             all_intensities.extend(image_data.flatten())
+            print(f"Calculated percentile threshold: {np.percentile(all_intensities, 25)}")
         return np.percentile(all_intensities, 25)
 
     def process_and_save(self):
@@ -48,7 +51,8 @@ class NiftiPreprocessor:
             if self.data_size == 'xs':
                 dset_gt = f.create_dataset('gt', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
-            for raw_path, bg_path in zip(self.raw, self.bg):
+            for idx, (raw_path, bg_path) in enumerate(zip(self.raw, self.bg)):
+                print(f"Processing file {idx+1}/{len(self.raw)}: {os.path.basename(raw_path)}")
                 raw_slices, valid_indices = self.process_single_nifti(raw_path, percentile_threshold)
                 self.save_slices_to_dataset(dset_raw, raw_slices)
                 gc.collect()  # Trigger garbage collection
@@ -62,7 +66,8 @@ class NiftiPreprocessor:
                     gt_slices = self.process_mask_nifti_using_indices(gt_path, valid_indices)
                     self.save_slices_to_dataset(dset_gt, gt_slices)
                     gc.collect()
-
+            print("All files processed and saved.")
+            
     def save_slices_to_dataset(self, dataset, slices):
         current_length = dataset.shape[0]
         dataset.resize((current_length + len(slices), 256, 256))
