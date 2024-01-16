@@ -25,6 +25,6 @@ echo "env activated"
 
 ##python -u create_dataset.py
 
-python -u preprocessing.py --data_path $SLURM_SUBMIT_DIR/train_xl/data --output_file $SLURM_SUBMIT_DIR/dataset.hdf5 --data_size xl
+python -u preprocessing.py --data_path $SLURM_SUBMIT_DIR/train_xs/data --output_file $SLURM_SUBMIT_DIR/train_xs/data/dataset.hdf5 --data_size xs
 
 rm -rf "$SCRATCH_DIR"
