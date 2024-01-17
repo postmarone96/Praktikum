@@ -18,9 +18,15 @@ def combine_hdf5_files(source_files, output_file):
 
 # Define your source files and corresponding dataset names
 source_files = {
-    'xy': os.path.join(args.data_path, 'datasetxy.hdf5'),
-    'xz': os.path.join(args.data_path, 'datasetxz.hdf5'),
-    'yz': os.path.join(args.data_path, 'datasetyz.hdf5')
+    'bg': os.path.join(args.data_path, 'datasetxy.hdf5'),
+    'bg': os.path.join(args.data_path, 'datasetxz.hdf5'),
+    'bg': os.path.join(args.data_path, 'datasetyz.hdf5'),
+    'gt': os.path.join(args.data_path, 'datasetxy.hdf5'),
+    'gt': os.path.join(args.data_path, 'datasetxz.hdf5'),
+    'gt': os.path.join(args.data_path, 'datasetyz.hdf5'),
+    'raw': os.path.join(args.data_path, 'datasetxy.hdf5'),
+    'raw': os.path.join(args.data_path, 'datasetxz.hdf5'),
+    'raw': os.path.join(args.data_path, 'datasetyz.hdf5')
 }
 
 # Output file
