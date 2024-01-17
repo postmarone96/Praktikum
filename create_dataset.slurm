@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#!/bin/bash
+
 #SBATCH -c 16
 #SBATCH -J train_job
 #SBATCH --output=o_data_%j.txt
@@ -14,7 +16,7 @@
 SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
 mkdir -p "$SCRATCH_DIR"
 
-cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
+cp $HOME/Praktikum/mask_creator.py $SCRATCH_DIR/
 
 cd $SCRATCH_DIR
 
@@ -25,7 +27,7 @@ echo "env activated"
 
 ##python -u create_dataset.py
 
-python -u preprocessing.py --data_path $SLURM_SUBMIT_DIR/train_xs/data --output_file $SLURM_SUBMIT_DIR/train_xs/data/datasetxz.hdf5 --data_size xs
+python -u mask_creator.py --data_path $SLURM_SUBMIT_DIR/train_xs/data
+
 
 rm -rf "$SCRATCH_DIR"
-
