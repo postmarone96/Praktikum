@@ -42,33 +42,45 @@ class NiftiPreprocessor:
             assert len(self.raw) == len(self.gt), "Mismatch in number gt files "
 
         percentile_threshold = self.calculate_percentile_threshold(self.raw)
+        buffers = {'raw': {'xy': [], 'xz': [], 'yz': []},
+                   'bg': {'xy': [], 'xz': [], 'yz': []},
+                   'gt': {'xy': [], 'xz': [], 'yz': []} if self.data_size == 'xs' else None}
 
         with h5py.File(self.output_file, 'w') as f:
             dset_raw = f.create_dataset('raw', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
             dset_bg = f.create_dataset('bg', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
+            dset_gt = None
             if self.data_size == 'xs':
                 dset_gt = f.create_dataset('gt', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
             for idx, (raw_path, bg_path) in enumerate(zip(self.raw, self.bg)):
                 print(f"Processing file {idx+1}/{len(self.raw)}: {os.path.basename(raw_path)}")
+
+                # Process and accumulate slices for raw files
                 raw_buffer, valid_indices = self.process_single_nifti(raw_path, percentile_threshold)
-                self.save_slices_to_dataset(dset_raw, raw_buffer['xy'])
-                self.save_slices_to_dataset(dset_raw, raw_buffer['xz'])
-                self.save_slices_to_dataset(dset_raw, raw_buffer['yz'])
-                gc.collect()  # Trigger garbage collection
+                for plane in ['xy', 'xz', 'yz']:
+                    buffers['raw'][plane].extend(raw_buffer[plane])
 
-                bg_buffer = self.process_single_nifti_using_indices(bg_path, valid_indices)
-                self.save_slices_to_dataset(dset_bg, bg_buffer['xy'])
-                self.save_slices_to_dataset(dset_bg, bg_buffer['xz'])
-                self.save_slices_to_dataset(dset_bg, bg_buffer['yz'])
-                gc.collect()  # Trigger garbage collection
+                # Similar processing for bg files
+                bg_buffer, _ = self.process_single_nifti(bg_path, percentile_threshold)
+                for plane in ['xy', 'xz', 'yz']:
+                    buffers['bg'][plane].extend(bg_buffer[plane])
 
+                # Similar processing for gt files if applicable
                 if self.data_size == 'xs':
-                    gt_buffer = self.process_mask_nifti_using_indices(self.gt[self.raw.index(raw_path)], valid_indices)
-                    self.save_slices_to_dataset(dset_gt, gt_buffer['xy'])
-                    self.save_slices_to_dataset(dset_gt, gt_buffer['xz'])
-                    self.save_slices_to_dataset(dset_gt, gt_buffer['yz'])
-                    gc.collect()
+                    gt_path = self.gt[self.raw.index(raw_path)]
+                    gt_buffer, _ = self.process_single_nifti(gt_path, percentile_threshold)
+                    for plane in ['xy', 'xz', 'yz']:
+                        buffers['gt'][plane].extend(gt_buffer[plane])
+
+                gc.collect()
+
+            # Append accumulated buffers to datasets
+            for plane in ['xy', 'xz', 'yz']:
+                self.save_slices_to_dataset(dset_raw, buffers['raw'][plane])
+                self.save_slices_to_dataset(dset_bg, buffers['bg'][plane])
+                if self.data_size == 'xs':
+                    self.save_slices_to_dataset(dset_gt, buffers['gt'][plane])
 
             print("All files processed and saved.")
 
@@ -76,56 +88,19 @@ class NiftiPreprocessor:
         current_length = dataset.shape[0]
         dataset.resize((current_length + len(slices), 256, 256))
         dataset[current_length:] = np.array(slices)
-        print(f"Total dataset size: {dataset.shape[0]} slices.")
-
-    def process_single_nifti_using_indices(self, nii_path, valid_indices):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        buffer = {'xy': [], 'xz': [], 'yz': []}
-        for plane in ['xy', 'xz', 'yz']:
-            slices = self.get_slices(image_data, plane)
-            buffer[plane].extend(self.process_slices(slices, valid_indices[plane], plane))
-        return buffer
-
-    def process_mask_nifti_using_indices(self, nii_path, valid_indices):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        buffer = {'xy': [], 'xz': [], 'yz': []}
-        for plane in ['xy', 'xz', 'yz']:
-            slices = self.get_slices(image_data, plane)
-            buffer[plane].extend(self.process_slices_for_masks(slices, valid_indices[plane], plane))
-        return buffer
-
-    def process_slices(self, slices, idx, plane):
-        buffer = []
-        for i in idx:
-            img = slices[i]
-            max_value = np.max(img)
-            img /= max_value
-            img_cropped = img[:256, :256]  # Adjust based on your dimensions
-            buffer.append(img_cropped)
-        return buffer
-
-    def process_slices_for_masks(self, slices, idx, plane):
-        buffer = []
-        for i in idx:
-            img = slices[i]
-            max_value = np.max(img)
-            img /= max_value
-            img_cropped = img[:256, :256]  # Adjust based on your dimensions
-            img_cropped = (img_cropped > 0.2).astype(np.float32)
-            buffer.append(img_cropped)
-        return buffer
+        print(f"Saved {len(slices)} slices to dataset. New dataset size: {dataset.shape[0]}")
 
     def process_single_nifti(self, nii_path, percentile_threshold):
         img = nib.load(nii_path)
         image_data = img.get_fdata()
+        slices_xy = np.moveaxis(image_data, -1, 0)
+        slices_xz = np.moveaxis(image_data, 0, 1)
+        slices_yz = np.moveaxis(image_data, 0, 2)
 
         valid_indices = {'xy': [], 'xz': [], 'yz': []}
         buffer = {'xy': [], 'xz': [], 'yz': []}
 
-        for plane in ['xy', 'xz', 'yz']:
-            slices = self.get_slices(image_data, plane)
+        for plane, slices in zip(['xy', 'xz', 'yz'], [slices_xy, slices_xz, slices_yz]):
             for i, img in enumerate(slices):
                 avg_intensity = np.mean(img)
                 if avg_intensity >= percentile_threshold:
@@ -137,13 +112,7 @@ class NiftiPreprocessor:
 
         return buffer, valid_indices
 
-    def get_slices(self, image_data, plane):
-        if plane == 'xy':
-            return np.moveaxis(image_data, -1, 0)
-        elif plane == 'xz':
-            return np.moveaxis(image_data, 0, 1)
-        else:  # 'yz'
-            return np.moveaxis(image_data, 0, 2)
+    # Define process_slices and process_slices_for_masks as needed
 
 preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
                                 bg_dir=os.path.join(args.data_path, 'bg'),
