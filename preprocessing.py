@@ -81,18 +81,20 @@ class NiftiPreprocessor:
     def process_single_nifti_using_indices(self, nii_path, valid_indices):
         img = nib.load(nii_path)
         image_data = img.get_fdata()
-        slices_xy = np.moveaxis(image_data, -1, 0)
-        # slices_zy = np.moveaxis(image_data, 0, 1)
-        # slices_xz = np.moveaxis(image_data, 0, 2)
-        return self.process_slices(slices_xy, valid_indices) # + self.process_slices(slices_zy) + self.process_slices(slices_xz)
+        buffer = []
+        for plane in ['xy', 'xz', 'yz']:
+            slices = np.moveaxis(image_data, -1, 0) if plane == 'xy' else (np.moveaxis(image_data, 0, 1) if plane == 'xz' else np.moveaxis(image_data, 0, 2))
+            buffer.extend(self.process_slices(slices, valid_indices[plane]))
+        return buffer
 
     def process_mask_nifti_using_indices(self, nii_path, valid_indices):
         img = nib.load(nii_path)
         image_data = img.get_fdata()
-        slices_xy = np.moveaxis(image_data, -1, 0)
-        #slices_zy = np.moveaxis(image_data, 0, 1)
-        #slices_xz = np.moveaxis(image_data, 0, 2)
-        return self.process_slices_for_masks(slices_xy, valid_indices) #+ self.process_slices_for_masks(slices_zy) + self.process_slices_for_masks(slices_xz)
+        buffer = []
+        for plane in ['xy', 'xz', 'yz']:
+            slices = np.moveaxis(image_data, -1, 0) if plane == 'xy' else (np.moveaxis(image_data, 0, 1) if plane == 'xz' else np.moveaxis(image_data, 0, 2))
+            buffer.extend(self.process_slices_for_masks(slices, valid_indices[plane]))
+        return buffer
 
     def process_slices(self, slices, idx):
         buffer = []
@@ -111,7 +113,7 @@ class NiftiPreprocessor:
             max_value = np.max(img)
             img /= max_value
             img_cropped = img[0:256, 0:256]
-            img_cropped = (img_cropped > 0.5).astype(np.float32)
+            img_cropped = (img_cropped > 0.2).astype(np.float32)
             buffer.append(img_cropped)
         return buffer
 
@@ -119,17 +121,22 @@ class NiftiPreprocessor:
         img = nib.load(nii_path)
         image_data = img.get_fdata()
         slices_xy = np.moveaxis(image_data, -1, 0)
+        slices_xz = np.moveaxis(image_data, 0, 1)
+        slices_yz = np.moveaxis(image_data, 0, 2)
 
-        valid_indices = []
+        valid_indices = {'xy': [], 'xz': [], 'yz': []}
         buffer = []
-        for i, img in enumerate(slices_xy):
-            avg_intensity = np.mean(img)
-            if avg_intensity >= percentile_threshold:
-                valid_indices.append(i)
-                max_value = np.max(img)
-                img /= max_value
-                img_cropped = img[0:256, 0:256]
-                buffer.append(img_cropped)
+
+        for plane, slices in zip(['xy', 'xz', 'yz'], [slices_xy, slices_xz, slices_yz]):
+            for i, img in enumerate(slices):
+                avg_intensity = np.mean(img)
+                if avg_intensity >= percentile_threshold:
+                    valid_indices[plane].append(i)
+                    max_value = np.max(img)
+                    img /= max_value
+                    img_cropped = img[0:256, 0:256]
+                    buffer.append(img_cropped)
+
         return buffer, valid_indices
 
 
