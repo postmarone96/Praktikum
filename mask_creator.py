@@ -32,7 +32,7 @@ datasets = {
 }
 
 # Output file
-output_file = os.path.join(args.data_path, 'combined_dataset.hdf5')
+output_file = os.path.join(args.data_path, 'dataset.hdf5')
 
 # Combine datasets
 for ds_name, files in datasets.items():
