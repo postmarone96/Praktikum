@@ -270,7 +270,7 @@ for epoch in range(start_epoch, n_epochs):
         lr_rates.append(lr_unet)
         val_losses.append(val_epoch_loss / (step + 1))
 
-    if epoch % 5 == 0 and epoch > 0:
+    if (epoch % 5 == 0 and epoch > 0 and epoch < 50) or (epoch % 40 == 0 and epoch > 50):
         save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, f'cn_checkpoint_epoch_{epoch}.pth')
 
     if epoch > val_interval:
