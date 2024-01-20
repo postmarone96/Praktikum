@@ -314,7 +314,7 @@ for i in range(number_of_samples):
     cbar = plt.colorbar(im, ax=ax, fraction=0.015, pad=0.04)
     cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
     channel_height = concat_all_channels.size(2) // number_of_channels
-    channel_labels = ['Bg', 'Raw', 'Gt']
+    channel_labels = ['Raw', 'Bg', 'Gt']
     for j in range(number_of_channels):
         ax.text(-150, channel_height * (0.5 + j), channel_labels[j], fontsize=12, va='center', ha='center')
 
