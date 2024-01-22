@@ -24,6 +24,6 @@ eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
-python -u preprocessing.py.py --data_path $SLURM_SUBMIT_DIR/train_xs/data --size xs 
+python -u preprocessing.py.py --data_path $SLURM_SUBMIT_DIR/train_xs/data --data_size xs --output_file $SLURM_SUBMIT_DIR/train_xs/data/dataset.hdf5
 
 rm -rf "$SCRATCH_DIR"
