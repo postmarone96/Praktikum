@@ -132,7 +132,7 @@ unet = DiffusionModelUNet(
     attention_levels=(False, True, True),
     num_head_channels=(0, 256, 512),
 )
-ldm_path = glob.glob('ldm_model_*.pth')
+ldm_path = glob.glob('ldm*.pth')
 ldm_model = torch.load(ldm_path[0])
 if list(ldm_model['unet_state_dict'].keys())[0].startswith('module.'):
     new_state_dict = {k[len("module."):]: v for k, v in ldm_model['unet_state_dict'].items()}
