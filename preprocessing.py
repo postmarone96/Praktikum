@@ -3,7 +3,6 @@ import numpy as np
 import nibabel as nib
 import h5py
 import argparse
-import gc
 
 # parser
 parser = argparse.ArgumentParser()
@@ -14,36 +13,19 @@ args = parser.parse_args()
 
 class NiftiPreprocessor:
     def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
-        print("Initializing NiftiPreprocessor")
         self.data_size = data_size
         self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
         self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
         if self.data_size == 'xs':
             self.gt = sorted([os.path.join(gt_dir, f) for f in os.listdir(gt_dir) if f.endswith('.nii.gz')])
         self.output_file = output_file
-        print(f"Found {len(self.raw)} raw files, {len(self.bg)} background files.")
-
-    def calculate_percentile_threshold(self, data_paths):
-        percentiles = []
-        for nii_path in data_paths:
-            img = nib.load(nii_path)
-            image_data = img.get_fdata()
-            percentile_25 = np.percentile(image_data, 25)
-            percentiles.append(percentile_25)
-            print(f"Calculated 25th percentile for {nii_path}: {percentile_25}")
-
-        overall_percentile = np.median(percentiles)
-        print(f"Overall 25th percentile threshold: {overall_percentile}")
-        return overall_percentile
 
     def process_and_save(self):
-        
         # Assuming equal number of image and annotation files
         assert len(self.raw) == len(self.bg), "Mismatch in number files"
         if self.data_size == 'xs':
             assert len(self.raw) == len(self.gt), "Mismatch in number gt files "
-
-        percentile_threshold = self.calculate_percentile_threshold(self.raw)
+            
         buffer_raw = []
         buffer_bg = []
         if self.data_size == 'xs':
@@ -55,85 +37,71 @@ class NiftiPreprocessor:
             if self.data_size == 'xs':
                 dset_gt = f.create_dataset('gt', (0, 256, 256), maxshape=(None, 256, 256), chunks=True, compression="gzip", compression_opts=9)
 
-            for idx, (raw_path, bg_path) in enumerate(zip(self.raw, self.bg)):
-                print(f"Processing file {idx+1}/{len(self.raw)}: {os.path.basename(raw_path)}")
-                raw_slices, valid_indices = self.process_single_nifti(raw_path, percentile_threshold)
-                self.save_slices_to_dataset(dset_raw, raw_slices)
-                gc.collect()  # Trigger garbage collection
-
-                bg_slices = self.process_single_nifti_using_indices(bg_path, valid_indices)
-                self.save_slices_to_dataset(dset_bg, bg_slices)
-                gc.collect()  # Trigger garbage collection
-
+            for raw_path, bg_path in zip(self.raw, self.bg):
+                buffer_raw.extend(self.process_single_nifti(raw_path))
+                buffer_bg.extend(self.process_single_nifti(bg_path))
                 if self.data_size == 'xs':
-                    gt_path = self.gt[self.raw.index(raw_path)]
-                    gt_slices = self.process_mask_nifti_using_indices(gt_path, valid_indices)
-                    self.save_slices_to_dataset(dset_gt, gt_slices)
-                    gc.collect()
-            print("All files processed and saved.")
-            
-    def save_slices_to_dataset(self, dataset, slices):
+                    gt_path = self.gt[self.raw.index(raw_path)]  # Match raw and gt files
+                    buffer_gt.extend(self.process_single_nifti_for_masks(gt_path))
+
+                # Save buffer if it's big enough
+                if len(buffer_raw) >= 30000:
+                    self.save_buffer_to_dataset(dset_raw, buffer_raw)
+                    self.save_buffer_to_dataset(dset_bg, buffer_bg)
+                    if self.data_size == 'xs':
+                        self.save_buffer_to_dataset(dset_gt, buffer_gt)
+                    buffer_raw.clear()
+                    buffer_bg.clear()
+                    if self.data_size == 'xs':
+                        buffer_gt.clear()
+
+            # If there's any remaining data in the buffers, save them
+            if buffer_raw:
+                self.save_buffer_to_dataset(dset_raw, buffer_raw)
+            if buffer_bg:
+                self.save_buffer_to_dataset(dset_bg, buffer_bg)
+            if self.data_size == 'xs' and buffer_gt:
+                self.save_buffer_to_dataset(dset_gt, buffer_gt)
+
+    def process_single_nifti(self, nii_path):
+        img = nib.load(nii_path)
+        image_data = img.get_fdata()
+        slices_xy = np.moveaxis(image_data, -1, 0)
+        slices_zy = np.moveaxis(image_data, 0, 1)
+        slices_xz = np.moveaxis(image_data, 0, 2)
+        return self.process_slices(slices_xy) + self.process_slices(slices_zy) + self.process_slices(slices_xz)
+
+    def process_single_nifti_for_masks(self, nii_path):
+        img = nib.load(nii_path)
+        image_data = img.get_fdata()
+        slices_xy = np.moveaxis(image_data, -1, 0)
+        slices_zy = np.moveaxis(image_data, 0, 1)
+        slices_xz = np.moveaxis(image_data, 0, 2)
+        return self.process_slices_for_masks(slices_xy) + self.process_slices_for_masks(slices_zy) + self.process_slices_for_masks(slices_xz)
+
+    def process_slices(self, slices):
+        buffer = []
+        for img in slices:
+            max_value = np.max(img)
+            img /= max_value
+            img_cropped = img[0:256, 0:256]
+            buffer.append(img_cropped)
+        return buffer
+
+    def process_slices_for_masks(self, slices):
+        buffer = []
+        for img in slices:
+            max_value = np.max(img)
+            img /= max_value
+            img_cropped = img[0:256, 0:256]
+            img_cropped = (img_cropped > 0.5).astype(np.float32)
+            buffer.append(img_cropped)
+        return buffer
+
+    def save_buffer_to_dataset(self, dataset, buffer):
         current_length = dataset.shape[0]
-        dataset.resize((current_length + len(slices), 256, 256))
-        dataset[current_length:] = np.array(slices)
-        print(f"Total dataset size: {dataset.shape[0]} slices.")
-
-    def process_single_nifti_using_indices(self, nii_path, valid_indices):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        #slices_xy = np.moveaxis(image_data, -1, 0)
-        #slices_xy = np.moveaxis(image_data, 0, 1)
-        slices_xy = np.moveaxis(image_data, 0, 2)
-        return self.process_slices(slices_xy, valid_indices) # + self.process_slices(slices_zy) + self.process_slices(slices_xz)
-
-    def process_mask_nifti_using_indices(self, nii_path, valid_indices):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        #slices_xy = np.moveaxis(image_data, -1, 0)
-        #slices_xy = np.moveaxis(image_data, 0, 1)
-        slices_xy = np.moveaxis(image_data, 0, 2)
-        return self.process_slices_for_masks(slices_xy, valid_indices) #+ self.process_slices_for_masks(slices_zy) + self.process_slices_for_masks(slices_xz)
-
-    def process_slices(self, slices, idx):
-        buffer = []
-        for i in idx:
-            img = slices[i]
-            max_value = np.max(img)
-            img /= max_value
-            img_cropped = img[0:256, 0:256]
-            buffer.append(img_cropped)
-        return buffer
-
-    def process_slices_for_masks(self, slices, idx):
-        buffer = []
-        for i in idx:
-            img = slices[i]
-            max_value = np.max(img)
-            img /= max_value
-            img_cropped = img[0:256, 0:256]
-            img_cropped = (img_cropped > 0.2).astype(np.float32)
-            buffer.append(img_cropped)
-        return buffer
-
-    def process_single_nifti(self, nii_path, percentile_threshold):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        #slices_xy = np.moveaxis(image_data, -1, 0)
-        #slices_xy = np.moveaxis(image_data, 0, 1)
-        slices_xy = np.moveaxis(image_data, 0, 2)
-
-        valid_indices = []
-        buffer = []
-        for i, img in enumerate(slices_xy):
-            avg_intensity = np.mean(img)
-            if avg_intensity >= percentile_threshold:
-                valid_indices.append(i)
-                max_value = np.max(img)
-                img /= max_value
-                img_cropped = img[0:256, 0:256]
-                buffer.append(img_cropped)
-        return buffer, valid_indices
-
+        dataset.resize((current_length + len(buffer), 256, 256))
+        dataset[current_length:current_length + len(buffer)] = np.array(buffer)
 
 preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
                                 bg_dir=os.path.join(args.data_path, 'bg'),
