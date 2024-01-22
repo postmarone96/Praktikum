@@ -16,7 +16,7 @@
 SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
 mkdir -p "$SCRATCH_DIR"
 
-cp $HOME/Praktikum/mask_creator.py $SCRATCH_DIR/
+cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
 
 cd $SCRATCH_DIR
 
@@ -24,10 +24,6 @@ eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
-
-##python -u create_dataset.py
-
-python -u mask_creator.py --data_path $SLURM_SUBMIT_DIR/train_xs/data
-
+python -u preprocessing.py.py --data_path $SLURM_SUBMIT_DIR/train_xs/data --size xs 
 
 rm -rf "$SCRATCH_DIR"
