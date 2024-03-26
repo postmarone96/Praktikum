@@ -12,23 +12,25 @@
 #SBATCH --qos=gpu_normal
 ##SBATCH -w supergpu02
 
-echo "directory definition"
+## directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5
-AE_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JVAE/vae_checkpoint_epoch_$CP.pth
-#LDM_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP.pth
-CN_CHECKPOINT=$SLURM_SUBMIT_DIR/job_$JCN/cn_checkpoint_epoch_$CP.pth
-#AE=$SLURM_SUBMIT_DIR/job_$JVAE/vae_model_*.pth
-AE="$HOME/Praktikum/train_xl/job_$JLDM/vae_model_*.pth"
-#LDM=$SLURM_SUBMIT_DIR/job_$JLDM/ldm_model_*.pth
-LDM="$HOME/Praktikum/train_xl/job_$JLDM/ldm_checkpoint_epoch_140.pth"
+
+AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP.pth"
+LDM_CHECKPOINT="$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP.pth"
+CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP.pth"
+
+AE="$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth"
+LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
+
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
-IDS_FILE="$HOME/Praktikum/ids.txt"
+IDS_FILE="$P_DIR/ids.txt"
 
-echo "Create the directories"
+## Create the directories
 mkdir -p $SCRATCH_DIR
 mkdir -p $SCRATCH_DIR/bg
 mkdir -p $SCRATCH_DIR/raw
@@ -36,12 +38,17 @@ mkdir -p $SCRATCH_DIR/gt
 mkdir -p $TARGET_DIR
 touch $FILEPATH
 
+## Save the param.json file to the target directory
+cp -f $P_DIR/params.json $TARGET_DIR
+
+## Logging functions definition
 log_and_copy() {
     local src=$1
     local dest=$2
     echo "$(basename "$src")" >> $FILEPATH
     cp "$src" "$dest"
 }
+
 periodic_backup() {
     while true; do
         sleep 4m
@@ -77,7 +84,7 @@ cleanup() {
 
 trap 'cleanup' SIGTERM
 
-echo "change to local scratch directory"
+# Change to local scratch directory
 cd $SCRATCH_DIR
 
 eval "$(conda shell.bash hook)"
@@ -87,36 +94,40 @@ echo "env activated"
 periodic_backup &
 BACKUP_PID=$!
 
+# Data preprocessing
 if [ ! -e "$DATASET" ]; then
     if [ "$SIZE" = 'xl' ]; then
-            cp -r $SLURM_SUBMIT_DIR/data/bg "$SCRATCH_DIR"
-            cp -r $SLURM_SUBMIT_DIR/data/raw "$SCRATCH_DIR"
+        cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
+        python -u cp_xl_data.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
+        cp -r $SLURM_SUBMIT_DIR/data/bg "$SCRATCH_DIR"
+        cp -r $SLURM_SUBMIT_DIR/data/raw "$SCRATCH_DIR"
 
     elif [ "$SIZE" = 'xs' ]; then
-        SRC_DIR="/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance"
-        cp -r "$SRC_DIR/bg" "$SCRATCH_DIR"
-        cp -r "$SRC_DIR/raw" "$SCRATCH_DIR"
-        cp -r "$SRC_DIR/gt" "$SCRATCH_DIR"
+        cp -r "$BG" "$SCRATCH_DIR"
+        cp -r "$RAW" "$SCRATCH_DIR"
+        cp -r "$GT" "$SCRATCH_DIR"
     fi
 
-    cp $HOME/Praktikum/preprocessing.py $SCRATCH_DIR/
+    cp $P_DIR/preprocessing.py $SCRATCH_DIR/
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
     echo "preprocessing completed"
+
 elif  [ -e "$DATASET" ]; then
     cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
 
+# Train VAE
 if [ "$MODEL" = "vae" ]; then
     echo "training vae"
     if [ -e "$AE_CHECKPOINT" ]; then
         cp $AE_CHECKPOINT $SCRATCH_DIR/
         echo "vae_checkpoint copied successfully."
-    fi 
-    cp $HOME/Praktikum/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE 
+    fi
+    cp $P_DIR/train_vae.py $SCRATCH_DIR/
+    python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE
 
-
+# Train LDM
 elif [ "$MODEL" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
@@ -124,9 +135,10 @@ elif [ "$MODEL" = "ldm" ]; then
         echo "ldm_checkpoint copied successfully."
     fi 
     cp $AE $SCRATCH_DIR/
-    cp $HOME/Praktikum/train_ldm.py $SCRATCH_DIR/
+    cp $P_DIR/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE --job $SLURM_JOB_ID
 
+# Train $CN
 elif [ "$MODEL" = "cn" ]; then
     echo "training cn"
     if [ -e "$CN_CHECKPOINT" ]; then
@@ -135,7 +147,7 @@ elif [ "$MODEL" = "cn" ]; then
     fi
     cp $AE $SCRATCH_DIR/
     cp $LDM $SCRATCH_DIR/
-    cp $HOME/Praktikum/train_cn.py $SCRATCH_DIR/
+    cp $P_DIR/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
 

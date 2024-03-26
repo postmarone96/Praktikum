@@ -1,0 +1,27 @@
+{
+    "size": "xs",
+    "model": "vae",
+    "learning_rate": 6,
+    "checkpoint": 0,
+    "project_dir" : "$HOME/Praktikum/",
+    "bg_xs": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg",
+    "raw_xs": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw",
+    "gt_xs": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/gt",
+    "bg_xl": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/",
+    "raw_xl": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/",
+    "jobs": {
+        "vae": {
+          "id": 0,
+          "directory": "train_xs"
+        },
+        "ldm": {
+          "id": 0,
+          "directory": "train_xs"
+        },
+        "cn": {
+          "id": 0,
+          "directory": "train_xs"
+        }
+      }
+  }
+  

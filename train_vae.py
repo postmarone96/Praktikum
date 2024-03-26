@@ -34,13 +34,21 @@ args = parser.parse_args()
 #    number_of_channels = 3
 #else:
 number_of_channels = 2
-    
+
 def print_with_timestamp(message):
+    """
+    prints a given message with a timestamp
+    """
     current_time = datetime.now()
     print(f"{current_time} - {message}")
+
+
 print_with_timestamp("Starting the script")
 
 def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer_g, optimizer_d, scheduler_d, scheduler_g, val_recon_losses, epoch_recon_losses, epoch_gen_losses, epoch_disc_losses, intermediary_images, lr_rates_g, lr_rates_d, val_epochs, filename):
+    """
+    saves checkpoints of the desired models, metrics and outputs
+    """
     checkpoint = {
         'epoch': epoch,
         'autoencoder_state_dict': autoencoder_model.module.state_dict(),
@@ -60,14 +68,13 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
     }
     torch.save(checkpoint, filename)
 
-print_with_timestamp("Defining NiftiDataset class")
+
 class NiftiHDF5Dataset(Dataset):
     def __init__(self, hdf5_file, number_of_channels):
         self.hdf5_file = hdf5_file
         self.number_of_channels = number_of_channels
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            # Assuming image_slices and annotation_slices have the same length
             return len(f['bg'])
 
     def __getitem__(self, idx):
