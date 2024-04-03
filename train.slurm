@@ -28,7 +28,6 @@ LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
 
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
-IDS_FILE="$P_DIR/ids.txt"
 
 ## Create the directories
 mkdir -p $SCRATCH_DIR
@@ -94,25 +93,24 @@ echo "env activated"
 periodic_backup &
 BACKUP_PID=$!
 
-# Data preprocessing
-if [ ! -e "$DATASET" ]; then
+# Data Preprocessing
+if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
+    # If there is no dataset file
     if [ "$SIZE" = 'xl' ]; then
         cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
-        python -u cp_xl_data.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
-        cp -r $SLURM_SUBMIT_DIR/data/bg "$SCRATCH_DIR"
-        cp -r $SLURM_SUBMIT_DIR/data/raw "$SCRATCH_DIR"
+        python -u cp_xl_data.py --target_dir $SCRATCH_DIR --bg $BG_XL --raw $RAW_XL --ids $IDS_FILE
 
     elif [ "$SIZE" = 'xs' ]; then
-        cp -r "$BG" "$SCRATCH_DIR"
-        cp -r "$RAW" "$SCRATCH_DIR"
-        cp -r "$GT" "$SCRATCH_DIR"
+        cp -r "$BG_XS" "$SCRATCH_DIR"
+        cp -r "$RAW_XS" "$SCRATCH_DIR"
+        cp -r "$GT_XS" "$SCRATCH_DIR"
     fi
 
     cp $P_DIR/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE --gt_th $GT_TH
     echo "preprocessing completed"
 
-elif  [ -e "$DATASET" ]; then
+elif  [[ -e "$DATASET" ]] && [["$BROKEN_DS" -eq 0]] ; then
     cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
