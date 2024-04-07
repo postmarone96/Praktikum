@@ -58,30 +58,14 @@
         "attention_levels": [false, false, false],
         "with_encoder_nonlocal_attn": false,
         "with_decoder_nonlocal_attn": false
-
-      "vae": {
-        "cp": 0,
-        "id": 0,
-        "directory": "train_xs"
       },
+
       "discriminator": {
         "spatial_dims": 2,
         "num_layers_d": 3,
         "num_channels": 64,
         "in_channels": 1,
         "out_channels": 1
-      }
-
-      "ldm": {
-        "cp": 0,
-        "id": 0,
-        "directory": "train_xs"
-      },
-
-      "cn": {
-        "cp": 0,
-        "id": 0,
-        "directory": "train_xs"
       }
     },
     "loss": {
@@ -91,12 +75,15 @@
       "perceptual_loss": "alex",
       "perceptual_weight": 0.001,
       "kl_weight": 1e-6
-    },
+    }
+  },
+
     "optimizer": {
       "lr_g": 0.0001,
       "lr_d": 0.00005,
       "scheduler": {
         "reduce_on_plateau": {
+          "mode": "min",
           "factor": 0.5,
           "patience": 20
         }

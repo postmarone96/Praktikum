@@ -98,7 +98,6 @@ val_indices = indices[training_size:]
 train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
-print_with_timestamp("Splitting data for training and validation")
 train_loader = DataLoader(train_dataset, 
                             batch_size=config["dataset"]["batch_size"], 
                             shuffle=config["dataset"]["shuffle"], 
@@ -111,19 +110,13 @@ val_loader = DataLoader(validation_dataset,
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
 
-print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
-print_with_timestamp("AutoEncoder setup")
-
-# Before the training loop:
-start_epoch = 0
-checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
-
-# Model Initialization using the 'vae' section of the configuration
+# Visual Auto Encoder
 autoencoder_config = config['model']['autoencoder']
 autoencoderkl = AutoencoderKL(**autoencoder_config).to(device)
 
+# Discriminator
 discriminator_config = vae_config['model']['discriminator']
 discriminator = PatchDiscriminator(**discriminator_config).to(device)
 
@@ -136,8 +129,12 @@ optimizer_g = Adam(autoencoderkl.parameters(), lr=vae_config['optimizer']['lr_g'
 optimizer_d = Adam(discriminator.parameters(), lr=vae_config['optimizer']['lr_d'])
 
 # Scheduler Initialization
-scheduler_g = ReduceLROnPlateau(optimizer_g, 'min', **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
-scheduler_d = ReduceLROnPlateau(optimizer_d, 'min', **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
+scheduler_g = ReduceLROnPlateau(optimizer_g, **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
+scheduler_d = ReduceLROnPlateau(optimizer_d, **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
+
+# Initialization
+start_epoch = 0
+checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
 
 # Upload Parameters from Checkpoint
 if checkpoint_path:
@@ -157,7 +154,6 @@ if checkpoint_path:
     val_epochs = checkpoint['val_epochs']
     lr_rates_g = checkpoint['lr_rates_g']
     lr_rates_d = checkpoint['lr_rates_d']
-    print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
     val_recon_losses = []
     epoch_recon_losses = []
