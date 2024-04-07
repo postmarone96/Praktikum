@@ -2,6 +2,7 @@ import os
 import glob
 import argparse
 import h5py
+import json
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,18 +23,15 @@ from generative.networks.schedulers import DDPMScheduler
 # clear CUDA
 torch.cuda.empty_cache()
 
+with open('model_config.json') as json_file:
+    config = json.load(json_file)
+    vae_config = json.load(f)['vae']
+
 # parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--data_size", type=str, required=True)
-parser.add_argument("--lr", type=str, default=1e-4)
+parser.add_argument("--dataset_file", type=str, required=True)
 args = parser.parse_args()
 
-
-#if args.data_size == 'xs':
-#    number_of_channels = 3
-#else:
-number_of_channels = 2
 
 def print_with_timestamp(message):
     """
@@ -70,41 +68,26 @@ def save_checkpoint_vae(epoch, autoencoder_model, discriminator_model, optimizer
 
 
 class NiftiHDF5Dataset(Dataset):
-    def __init__(self, hdf5_file, number_of_channels):
+    def __init__(self, hdf5_file, input_channels):
         self.hdf5_file = hdf5_file
-        self.number_of_channels = number_of_channels
+        self.input_channels = input_channels
+        
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            return len(f['bg'])
+            return len(f[next(iter(self.input_channels))]) 
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            bg_data = f['bg'][idx]
-            raw_data = f['raw'][idx]
-            if self.number_of_channels == 3:
-                gt_data = f['gt'][idx]
-
-        # Convert to PyTorch tensors
-        chann_1 = torch.tensor(raw_data)
-        chann_2 = torch.tensor(bg_data)
-        if self.number_of_channels == 3:
-            chann_3 = torch.tensor(gt_data)
-
-        # Stack the image and annotation along the channel dimension
-        if self.number_of_channels == 3:
-            combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
-        else: 
-            combined = chann_1.unsqueeze(0) #torch.stack([chann_1, chann_2], dim=0)
-
+            data_tensors = [torch.tensor(f[channel][idx]) for channel in self.input_channels]
+            combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(args.output_file, number_of_channels)
-
-validation_split = 0.2
+dataset = NiftiHDF5Dataset(args.output_file, config['input_channels'])
+validation_split = config["dataset"]["validation_split"]
 dataset_size = len(dataset)
 validation_size = int(validation_split * dataset_size)
 training_size = dataset_size - validation_size
@@ -116,8 +99,17 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=10, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, 
+                            batch_size=config["dataset"]["batch_size"], 
+                            shuffle=config["dataset"]["shuffle"], 
+                            num_workers=config["dataset"]["num_workers"], 
+                            persistent_workers=config["dataset"]["persistent_workers"])
+
+val_loader = DataLoader(validation_dataset, 
+                            batch_size=config["dataset"]["batch_size"], 
+                            shuffle=config["dataset"]["shuffle"], 
+                            num_workers=config["dataset"]["num_workers"], 
+                            persistent_workers=config["dataset"]["persistent_workers"])
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -127,21 +119,27 @@ print_with_timestamp("AutoEncoder setup")
 # Before the training loop:
 start_epoch = 0
 checkpoint_path = glob.glob('vae_checkpoint_epoch_*.pth')
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-discriminator = PatchDiscriminator(spatial_dims=2, num_layers_d=3, num_channels=64, in_channels=1, out_channels=1)
-optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=10**(-float(args.lr)))
-optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=(10**(-float(args.lr)))/2)
-scheduler_g = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_g, 'min', factor=0.5, patience=20)
-scheduler_d = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer_d, 'min', factor=0.5, patience=20)
-adv_loss = PatchAdversarialLoss(criterion="least_squares")
-adv_weight = 0.01
-perceptual_loss = PerceptualLoss(spatial_dims=2, network_type="alex")
+
+# Model Initialization using the 'vae' section of the configuration
+autoencoder_config = config['model']['autoencoder']
+autoencoderkl = AutoencoderKL(**autoencoder_config).to(device)
+
+discriminator_config = vae_config['model']['discriminator']
+discriminator = PatchDiscriminator(**discriminator_config).to(device)
+
+# DataParallel
 autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 discriminator = torch.nn.DataParallel(discriminator)
-autoencoderkl = autoencoderkl.to(device)
-discriminator = discriminator.to(device)
-perceptual_loss= perceptual_loss.to(device)
 
+# Optimizer Initialization
+optimizer_g = Adam(autoencoderkl.parameters(), lr=vae_config['optimizer']['lr_g'])
+optimizer_d = Adam(discriminator.parameters(), lr=vae_config['optimizer']['lr_d'])
+
+# Scheduler Initialization
+scheduler_g = ReduceLROnPlateau(optimizer_g, 'min', **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
+scheduler_d = ReduceLROnPlateau(optimizer_d, 'min', **vae_config['optimizer']['scheduler']['reduce_on_plateau'])
+
+# Upload Parameters from Checkpoint
 if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1  # because we start the next epoch
@@ -170,14 +168,18 @@ else:
     lr_rates_g = []
     lr_rates_d = []
 
-perceptual_weight = 0.001
+# Losses and other parameters
+adv_loss = PatchAdversarialLoss(criterion=vae_config['loss']['adv_loss'])
+adv_weight = vae_config['loss']['adv_weight']
+perceptual_loss = PerceptualLoss(spatial_dims=vae_config['loss']['spatial_dims'], network_type=vae_config['loss']['perceptual_loss']).to(device)
+perceptual_weight = vae_config['loss']['perceptual_weight']
+kl_weight = vae_config['loss']['kl_weight']
 scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
-kl_weight = 1e-6
-n_epochs = 100
-val_interval = 2
-autoencoder_warm_up_n_epochs = -1
-num_example_images = 4
+n_epochs = vae_config['training']['n_epochs']
+val_interval = vae_config['training']['val_interval']
+autoencoder_warm_up_n_epochs = vae_config['training']['autoencoder_warm_up_n_epochs']
+num_example_images = vae_config['training']['num_example_images']
 
 
 print_with_timestamp("Start setting")

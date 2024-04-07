@@ -14,17 +14,25 @@
 
 ## directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
-OUTPUTFILE=$SCRATCH_DIR/dataset.hdf5
+PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5
 
-AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP.pth"
-LDM_CHECKPOINT="$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP.pth"
-CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP.pth"
+if ["$CP_VAE" -ne 0] then
+    AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP_VAE.pth"
+elif ["$CP_VAE" -eq 0] then
+    AE="$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth"
+fi
 
-AE="$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth"
-LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
+if ["$CP_LDM" -ne 0] then
+    LDM_CHECKPOINT="$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP_LDM.pth"
+elif ["$CP_LDM" -eq 0] then
+    LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
+fi
+
+CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP_CN.pth"
+
 
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
@@ -123,7 +131,7 @@ if [ "$MODEL" = "vae" ]; then
         echo "vae_checkpoint copied successfully."
     fi
     cp $P_DIR/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE
+    python -u train_vae.py --dataset_file $PREPROCESSING_OUTPUT
 
 # Train LDM
 elif [ "$MODEL" = "ldm" ]; then

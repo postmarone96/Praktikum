@@ -28,10 +28,8 @@ torch.cuda.empty_cache()
 
 # parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--data_size", type=str, required=True)
+parser.add_argument("--dataset_file", type=str, required=True)
 parser.add_argument("--job", type=str, required=True)
-parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
 
 def print_with_timestamp(message):
@@ -55,48 +53,29 @@ def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr,
     }
     torch.save(checkpoint, filename)
 
-number_of_channels = 1
 
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
-    def __init__(self, hdf5_file, number_of_channels):
+    def __init__(self, hdf5_file, input_channels):
         self.hdf5_file = hdf5_file
-        self.number_of_channels = number_of_channels
+        self.input_channels = input_channels
+        
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
-            # Assuming image_slices and annotation_slices have the same length
-            return len(f['bg'])
+            return len(f[next(iter(self.input_channels))]) 
 
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
-            bg_data = f['bg'][idx]
-            raw_data = f['raw'][idx]
-            if self.number_of_channels == 3:
-                gt_data = f['gt'][idx]
-
-        # Convert to PyTorch tensors
-        chann_1 = torch.tensor(raw_data)
-        chann_2 = torch.tensor(bg_data)
-        if self.number_of_channels == 3:
-            chann_3 = torch.tensor(gt_data)
-
-        # Stack the image and annotation along the channel dimension
-        if self.number_of_channels == 3:
-            combined = torch.stack([chann_1, chann_2, chann_3], dim=0)
-        else: 
-            combined = chann_1.unsqueeze(0) #torch.stack([chann_1, chann_2], dim=0)
-
+            data_tensors = [torch.tensor(f[channel][idx]) for channel in self.input_channels]
+            combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
 
 vae_best_val_loss = float('inf')
 ldm_best_val_loss = float('inf')
 
 print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(args.output_file, number_of_channels)
-
-ldm_best_val_loss = float('inf')
-
-validation_split = 0.2
+dataset = NiftiHDF5Dataset(args.output_file, config['input_channels'])
+validation_split = config["dataset"]["validation_split"]
 dataset_size = len(dataset)
 validation_size = int(validation_split * dataset_size)
 training_size = dataset_size - validation_size
@@ -108,8 +87,17 @@ train_dataset = Subset(dataset, train_indices)
 validation_dataset = Subset(dataset, val_indices)
 
 print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=16, persistent_workers=True)
-val_loader = DataLoader(validation_dataset, batch_size=8, shuffle=False, num_workers=16, persistent_workers=True)
+train_loader = DataLoader(train_dataset, 
+                            batch_size=config["dataset"]["batch_size"], 
+                            shuffle=config["dataset"]["shuffle"], 
+                            num_workers=config["dataset"]["num_workers"], 
+                            persistent_workers=config["dataset"]["persistent_workers"])
+
+val_loader = DataLoader(validation_dataset, 
+                            batch_size=config["dataset"]["batch_size"], 
+                            shuffle=config["dataset"]["shuffle"], 
+                            num_workers=config["dataset"]["num_workers"], 
+                            persistent_workers=config["dataset"]["persistent_workers"])
 
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
@@ -128,8 +116,13 @@ optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
 scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
 scaler = GradScaler()
 
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-vae_path = glob.glob('vae_model_*.pth')
+# Model Initialization using the 'vae' section of the configuration
+autoencoder_config = config['model']['autoencoder']
+autoencoderkl = AutoencoderKL(**autoencoder_config).to(device)
+if glob.glob('vae_model_*.pth'):
+    vae_path = glob.glob('vae_model_*.pth')
+else glob.glob('vae_checkpoint*.pth'):
+    vae_path = glob.glob('vae_checkpoint*.pth')
 vae_model = torch.load(vae_path[0])
 if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
     new_state_dict = {k[len("module."):]: v for k, v in vae_model['autoencoder_state_dict'].items()}
