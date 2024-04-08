@@ -1,3 +1,18 @@
+# --------------------------------------------------------------------------------
+# Copyright (c) MONAI Consortium
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Modified by Marouane Hajri on 08.04.2024
+# --------------------------------------------------------------------------------
+
 import os
 import argparse
 import h5py
@@ -32,93 +47,35 @@ parser.add_argument("--dataset_file", type=str, required=True)
 parser.add_argument("--job", type=str, required=True)
 args = parser.parse_args()
 
-def print_with_timestamp(message):
-    current_time = datetime.now()
-    print(f"{current_time} - {message}")
-print_with_timestamp("Starting the script")
+# parse parameters form json file
+with open('params.json') as json_file:
+    config = json.load(json_file)
 
-def save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, filename):
-    checkpoint = {
-        'epoch': epoch,
-        'unet_state_dict': unet.module.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scaler_state_dict':scaler.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-        'scheduler_lr_state_dict': scheduler_lr.state_dict(),
-        'epoch_losses': epoch_losses,
-        'val_losses': val_losses,
-        'scale_factor': scale_factor,
-        'val_epochs': val_epochs,
-        'lr_rates': lr_rates,
-    }
-    torch.save(checkpoint, filename)
+vae_config = json.load(f)['VAE']
+ldm_config = json.load(f)['LDM']
 
+# Prepare Dataset
+train_dataset, validation_dataset = setup_datasets( args.dataset_file, 
+                                                    config['input_channels'], 
+                                                    config["dataset"]["validation_split"])
 
-print_with_timestamp("Defining NiftiDataset class")
-class NiftiHDF5Dataset(Dataset):
-    def __init__(self, hdf5_file, input_channels):
-        self.hdf5_file = hdf5_file
-        self.input_channels = input_channels
-        
-    def __len__(self):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            return len(f[next(iter(self.input_channels))]) 
-
-    def __getitem__(self, idx):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            data_tensors = [torch.tensor(f[channel][idx]) for channel in self.input_channels]
-            combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
-        return combined
-
-vae_best_val_loss = float('inf')
-ldm_best_val_loss = float('inf')
-
-print_with_timestamp("Loading data")
-dataset = NiftiHDF5Dataset(args.output_file, config['input_channels'])
-validation_split = config["dataset"]["validation_split"]
-dataset_size = len(dataset)
-validation_size = int(validation_split * dataset_size)
-training_size = dataset_size - validation_size
-indices = torch.randperm(len(dataset))
-train_indices = indices[:training_size]
-val_indices = indices[training_size:]
-
-train_dataset = Subset(dataset, train_indices)
-validation_dataset = Subset(dataset, val_indices)
-
-print_with_timestamp("Splitting data for training and validation")
-train_loader = DataLoader(train_dataset, 
+train_loader = DataLoader(  train_dataset, 
                             batch_size=config["dataset"]["batch_size"], 
                             shuffle=config["dataset"]["shuffle"], 
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
 
-val_loader = DataLoader(validation_dataset, 
+val_loader = DataLoader(    validation_dataset, 
                             batch_size=config["dataset"]["batch_size"], 
                             shuffle=config["dataset"]["shuffle"], 
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
 
-print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
-print_with_timestamp("Start setting")
-unet = DiffusionModelUNet(
-    spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
-    num_res_blocks=2,
-    num_channels=(128, 256, 512),
-    attention_levels=(False, True, True),
-    num_head_channels=(0, 256, 512),
-)
-optimizer = torch.optim.Adam(unet.parameters(), lr=10**(-float(args.lr)))
-scheduler_lr = ReduceLROnPlateau(optimizer, 'min', factor=0.5, patience=20)
-scaler = GradScaler()
-
-# Model Initialization using the 'vae' section of the configuration
-autoencoder_config = config['model']['autoencoder']
-autoencoderkl = AutoencoderKL(**autoencoder_config).to(device)
+# Visual Auto Encoder
+autoencoder_config = vae_config['autoencoder']
+autoencoderkl = AutoencoderKL(**autoencoder_config)
 if glob.glob('vae_model_*.pth'):
     vae_path = glob.glob('vae_model_*.pth')
 else glob.glob('vae_checkpoint*.pth'):
@@ -130,16 +87,28 @@ if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
 else:
     new_state_dict = vae_model['autoencoder_state_dict']
     autoencoderkl.load_state_dict(new_state_dict)
-
 autoencoderkl = autoencoderkl.to(device).half()
 
-scheduler = DDPMScheduler(num_train_timesteps=1000, schedule="linear_beta", beta_start=0.0015, beta_end=0.0195)
+#Latent Diffsuion Model
+unet_config = ldm_config['unet']
+unet = DiffusionModelUNet(**unet_config).to(device)
 unet = torch.nn.DataParallel(unet)
-unet = unet.to(device)
 
+# Optimizer
+optimizer = torch.optim.Adam(unet.parameters(), lr=ldm_config['optimizer']['lr'])
 
+# Learning Rate Scheduler
+scheduler_lr = ReduceLROnPlateau(optimizer, **ldm_config['optimizer']['scheduler'])
+scaler = GradScaler()
+
+# DDPM Scheduler
+scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
+
+# Initialization
 start_epoch = 0
 checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
+
+# Upload Parameters from Checkpoint
 if checkpoint_path:
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
@@ -159,18 +128,20 @@ else:
     val_epochs = []
     lr_rates = []
 
-
-n_epochs = 200
-val_interval = 2
+# Inferer initialization
 check_data = next(iter(train_loader))
 with torch.no_grad():
     with autocast(enabled=True):
         z = autoencoderkl.encode_stage_2_inputs(check_data.to(device))
-print(f"Scaling factor set to {1/torch.std(z)}")
 scale_factor = 1 / torch.std(z)
-
 inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 
+# Other parameters
+n_epochs = ldm_config['training']['n_epochs']
+val_interval = ldm_config['training']['val_interval']
+num_epochs_checkpoints = ldm_config['training']['num_epochs_checkpoint']
+
+# Start training
 for epoch in range(start_epoch, n_epochs):
     unet.train()
     autoencoderkl.eval()
@@ -189,12 +160,10 @@ for epoch in range(start_epoch, n_epochs):
                 inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps, autoencoder_model=autoencoderkl
             )
             loss = F.mse_loss(noise_pred.float(), noise.float())
-
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
         epoch_loss += loss.item()
-
         progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
     epoch_losses.append(epoch_loss / (step + 1))
 
@@ -205,7 +174,6 @@ for epoch in range(start_epoch, n_epochs):
         with torch.no_grad():
             for val_step, batch in enumerate(val_loader, start=1):
                 images = batch.to(device)
-
                 with autocast(enabled=True):
                     z_mu, z_sigma = autoencoderkl.encode(images)
                     z = autoencoderkl.sampling(z_mu, z_sigma)
@@ -228,14 +196,12 @@ for epoch in range(start_epoch, n_epochs):
         lr_rates.append(lr_unet)
         val_losses.append(val_loss)
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
-    if epoch % 5 == 0 and epoch > 0:
+
+    if epoch % num_epochs_checkpoints == 0 and epoch > 0:
         save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_checkpoint_epoch_{epoch}.pth')
-        if val_loss < ldm_best_val_loss:
-            ldm_best_val_loss = val_loss
-            save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, 'ldm_best_checkpoint.pth')
+    
     if epoch > val_interval:
         fig, ax1 = plt.subplots(figsize=(10, 5))
-        # Plot Losses
         color = 'tab:blue'
         ax1.set_title('Learning Curves and Learning Rate', fontsize=20)
         ax1.set_xlabel('Epochs', fontsize=16)
@@ -244,40 +210,35 @@ for epoch in range(start_epoch, n_epochs):
         ax1.plot(range(epoch + 1), epoch_losses, color=color, label="Train")
         ax1.plot(val_epochs, val_losses, 'b--', label="Validation")
         ax1.tick_params(axis='y', labelcolor=color)
-
-        # Twin axis for learning rates
         ax2 = ax1.twinx()
         color = 'tab:red'
         ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
         ax2.plot(val_epochs, lr_rates, color=color, label='Learning Rate')
         ax2.tick_params(axis='y', labelcolor=color)
-
         fig.tight_layout()
         fig.legend(loc="upper right", bbox_to_anchor=(0.8,0.9))
-
         plt.savefig('LDM_learning_curves.png')
         plt.close()
+
 progress_bar.close()
 
-# Get current date and time
+
 now = datetime.now()
-# Format date and time
 date_time = now.strftime("%Y%m%d_%H%M")
-# Use date_time string in file name
 save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_model_{date_time}.pth')
 
+# Store generated output  
 autoencoderkl = autoencoderkl.to(device).float()
-
-current_working_directory = os.getcwd()  # Gets the directory where the script is being executed
+current_working_directory = os.getcwd()
 pkl_dir = os.path.join(current_working_directory, 'pkl_dir')
 os.makedirs(pkl_dir, exist_ok=True)
 
-number_of_samples = 50
+number_of_samples = ldm_config['sampling']['number_of_samples']
 data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
-    scheduler.set_timesteps(num_inference_steps=1000)
-    noise = torch.randn((1, 3, 64, 64))
+    scheduler.set_timesteps(num_inference_steps=ldm_config['sampling']['num_inference_steps'])
+    noise = torch.randn(ldm_config['sampling']['noise_shape'])
     noise = noise.to(device)
     
     with torch.no_grad():
@@ -286,7 +247,7 @@ for i in range(number_of_samples):
             diffusion_model=unet,
             scheduler=scheduler,
             save_intermediates=True,
-            intermediate_steps=100,
+            intermediate_steps=ldm_config['sampling']['intermediate_steps'],
             autoencoder_model=autoencoderkl,
         )
     # Store intermediates and noise in the dictionary
@@ -319,7 +280,7 @@ with open(os.path.join(pkl_dir, 'data_dict.pkl'), 'wb') as f:
     pickle.dump(data_dict, f)
 
 
-output_filename = os.path.join(current_working_directory, f'samples_{args.job}')  # Output file path
+output_filename = os.path.join(current_working_directory, f'samples_{args.job}')
 
 shutil.make_archive(output_filename, 'zip', pkl_dir)
 

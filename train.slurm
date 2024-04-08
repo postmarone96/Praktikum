@@ -103,7 +103,6 @@ BACKUP_PID=$!
 
 # Data Preprocessing
 if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
-    # If there is no dataset file
     if [ "$SIZE" = 'xl' ]; then
         cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
         python -u cp_xl_data.py --target_dir $SCRATCH_DIR --bg $BG_XL --raw $RAW_XL --ids $IDS_FILE
@@ -115,7 +114,7 @@ if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
     fi
 
     cp $P_DIR/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $OUTPUTFILE --data_size $SIZE --gt_th $GT_TH
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT --data_size $SIZE --gt_th $GT_TH
     echo "preprocessing completed"
 
 elif  [[ -e "$DATASET" ]] && [["$BROKEN_DS" -eq 0]] ; then
