@@ -40,7 +40,7 @@ with open('params.json') as json_file:
     config = json.load(json_file)
 
 # VAE Config
-vae_config = json.load(f)['VAE']
+vae_config = config['VAE']
 
 # Parser
 parser = argparse.ArgumentParser()

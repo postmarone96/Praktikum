@@ -15,11 +15,11 @@
 
 import os
 import argparse
-import h5py
 import glob
 import pickle
 import zipfile
 import shutil
+import json
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,16 +27,13 @@ import torch
 import monai
 from helper_functions import *
 from monai.utils import first
-import nibabel as nib
-from torch.utils.data import Dataset, DataLoader, Subset
+from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from generative.inferers import LatentDiffusionInferer
-from generative.losses.adversarial_loss import PatchAdversarialLoss
-from generative.losses.perceptual import PerceptualLoss
-from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, PatchDiscriminator
+from generative.networks.nets import AutoencoderKL, DiffusionModelUNet
 from generative.networks.schedulers import DDPMScheduler
 
 # clear CUDA
@@ -52,8 +49,8 @@ args = parser.parse_args()
 with open('params.json') as json_file:
     config = json.load(json_file)
 
-vae_config = json.load(f)['VAE']
-ldm_config = json.load(f)['LDM']
+vae_config = config['VAE']
+ldm_config = config['LDM']
 
 # Prepare Dataset
 train_dataset, validation_dataset = setup_datasets( args.dataset_file, 
@@ -91,6 +88,8 @@ optimizer = torch.optim.Adam(unet.parameters(), lr=ldm_config['optimizer']['lr']
 
 # Learning Rate Scheduler
 scheduler_lr = ReduceLROnPlateau(optimizer, **ldm_config['optimizer']['scheduler'])
+
+# Scaler
 scaler = GradScaler()
 
 # DDPM Scheduler

@@ -3,14 +3,17 @@ import h5py
 import torch
 import glob
 from torch.utils.data import Dataset, Subset
+import matplotlib.pyplot as plt
+
 
 class NiftiHDF5Dataset(Dataset):
     """
     Creates the datasets.
     """
-    def __init__(self, hdf5_file, input_channels):
+    def __init__(self, hdf5_file, input_channels, condition=None):
         self.hdf5_file = hdf5_file
         self.input_channels = input_channels
+        self.condition = condition
 
     def __len__(self):
         with h5py.File(self.hdf5_file, 'r') as f:
@@ -19,14 +22,20 @@ class NiftiHDF5Dataset(Dataset):
     def __getitem__(self, idx):
         with h5py.File(self.hdf5_file, 'r') as f:
             data_tensors = [torch.tensor(f[channel][idx], dtype=torch.float32) for channel in self.input_channels]
-            combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
+            if condition:
+                combined = {}
+                cond_tensor = [torch.tensor(f[channel][idx], dtype=torch.float32) for channel in self.condition]
+                combined['image'] = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
+                combined['cond'] = torch.stack(cond_tensor, dim=0) if len(cond_tensor) > 1 else cond_tensor[0].unsqueeze(0)
+            else:    
+                combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
 
-def setup_datasets(hdf5_file, input_channels, validation_split):
+def setup_datasets(hdf5_file, input_channels, condition=None, validation_split):
     """
     Prepares and splits the dataset into training and validation subsets.
     """
-    dataset = NiftiHDF5Dataset(hdf5_file, input_channels)
+    dataset = NiftiHDF5Dataset(hdf5_file, input_channels, condition)
     dataset_size = len(dataset)
     indices = torch.randperm(dataset_size).tolist()
 
@@ -51,23 +60,6 @@ def save_checkpoint(epoch, filename, **components):
             checkpoint[key] = value
     torch.save(checkpoint, filename)
 
-
-def save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, filename):
-    checkpoint = {
-        'epoch': epoch,
-        'cn_state_dict': controlnet.module.state_dict(),
-        'unet_state_dict': unet.module.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scaler_state_dict':scaler.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-        'scheduler_lr_state_dict': scheduler_lr.state_dict(),
-        'epoch_losses': epoch_losses,
-        'val_losses': val_losses,
-        'val_epochs': val_epochs,
-        'lr_rates': lr_rates,
-        
-    }
-    torch.save(checkpoint, filename)
 
 def load_model(config, model_class, file_prefix, model_prefix, device):
     """
