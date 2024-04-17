@@ -1,3 +1,18 @@
+# --------------------------------------------------------------------------------
+# Copyright (c) MONAI Consortium
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# Modified by Marouane Hajri on 08.04.2024
+# --------------------------------------------------------------------------------
+
 import os
 import argparse
 import h5py
@@ -14,6 +29,7 @@ from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
 from torchvision import transforms
+from helper_functions import *
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from generative.inferers import DiffusionInferer, ControlNetDiffusionInferer
@@ -36,27 +52,8 @@ parser.add_argument("--output_file", type=str, required=True)
 parser.add_argument("--lr", type=str, default=1e-4)
 args = parser.parse_args()
 
-def print_with_timestamp(message):
-    current_time = datetime.now()
-    print(f"{current_time} - {message}")
-print_with_timestamp("Starting the script")
 
-def save_checkpoint_cn(epoch, controlnet, unet, optimizer, scaler, scheduler, scheduler_lr, epoch_losses, val_losses, val_epochs, lr_rates, filename):
-    checkpoint = {
-        'epoch': epoch,
-        'cn_state_dict': controlnet.module.state_dict(),
-        'unet_state_dict': unet.module.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'scaler_state_dict':scaler.state_dict(),
-        'scheduler_state_dict': scheduler.state_dict(),
-        'scheduler_lr_state_dict': scheduler_lr.state_dict(),
-        'epoch_losses': epoch_losses,
-        'val_losses': val_losses,
-        'val_epochs': val_epochs,
-        'lr_rates': lr_rates,
-        
-    }
-    torch.save(checkpoint, filename)
+
 
 print_with_timestamp("Defining NiftiDataset class")
 class NiftiHDF5Dataset(Dataset):
@@ -110,37 +107,20 @@ val_loader = DataLoader(validation_dataset, batch_size=16, shuffle=False, num_wo
 print_with_timestamp("Setting up device and models")
 device = torch.device("cuda")
 
-# AutoencoderKL
-autoencoderkl = AutoencoderKL(spatial_dims=2, in_channels=1, out_channels=1, num_channels=(128, 128, 256), latent_channels=3, num_res_blocks=2, attention_levels=(False, False, False), with_encoder_nonlocal_attn=False, with_decoder_nonlocal_attn=False)
-vae_path = glob.glob('vae_model_*.pth')
-vae_model = torch.load(vae_path[0])
-if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
-    new_state_dict = {k[len("module."):]: v for k, v in vae_model['autoencoder_state_dict'].items()}
-    autoencoderkl.load_state_dict(new_state_dict)
-else:
-    new_state_dict = vae_model['autoencoder_state_dict']
-    autoencoderkl.load_state_dict(new_state_dict)
-autoencoderkl = autoencoderkl.to(device)
+# Visual Auto Encoder
+autoencoderkl = load_model(  config = vae_config['autoencoder'],
+                    model_class = AutoencoderKL, 
+                    file_prefix = 'vae', 
+                    model_prefix = 'autoencoder',
+                    device = device)
 
-# UNET
-unet = DiffusionModelUNet(
-    spatial_dims=2,
-    in_channels=3,
-    out_channels=3,
-    num_res_blocks=2,
-    num_channels=(128, 256, 512),
-    attention_levels=(False, True, True),
-    num_head_channels=(0, 256, 512),
-)
-ldm_path = glob.glob('ldm*.pth')
-ldm_model = torch.load(ldm_path[0])
-if list(ldm_model['unet_state_dict'].keys())[0].startswith('module.'):
-    new_state_dict = {k[len("module."):]: v for k, v in ldm_model['unet_state_dict'].items()}
-    unet.load_state_dict(new_state_dict)
-else:
-    unet.load_state_dict(ldm_model['unet_state_dict'])
+# Latent Diffsuion UNet
+unet = load_model(  config = ldm_config['unet'],
+                    model_class = DiffusionModelUNet, 
+                    file_prefix = 'ldm', 
+                    model_prefix = 'unet',
+                    device = device)
 unet = torch.nn.DataParallel(unet)
-unet = unet.to(device)
 
 # ControlNet
 controlnet = ControlNet(

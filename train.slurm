@@ -142,6 +142,7 @@ elif [ "$MODEL" = "ldm" ]; then
     cp $AE $SCRATCH_DIR/
     cp $P_DIR/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE --job $SLURM_JOB_ID
+    cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
 # Train $CN
 elif [ "$MODEL" = "cn" ]; then
@@ -155,7 +156,5 @@ elif [ "$MODEL" = "cn" ]; then
     cp $P_DIR/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
 fi
-
-cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
 cleanup

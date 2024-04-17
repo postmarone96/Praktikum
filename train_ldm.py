@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import monai
+from helper_functions import *
 from monai.utils import first
 import nibabel as nib
 from torch.utils.data import Dataset, DataLoader, Subset
@@ -74,24 +75,15 @@ val_loader = DataLoader(    validation_dataset,
 device = torch.device("cuda")
 
 # Visual Auto Encoder
-autoencoder_config = vae_config['autoencoder']
-autoencoderkl = AutoencoderKL(**autoencoder_config)
-if glob.glob('vae_model_*.pth'):
-    vae_path = glob.glob('vae_model_*.pth')
-else glob.glob('vae_checkpoint*.pth'):
-    vae_path = glob.glob('vae_checkpoint*.pth')
-vae_model = torch.load(vae_path[0])
-if list(vae_model['autoencoder_state_dict'].keys())[0].startswith('module.'):
-    new_state_dict = {k[len("module."):]: v for k, v in vae_model['autoencoder_state_dict'].items()}
-    autoencoderkl.load_state_dict(new_state_dict)
-else:
-    new_state_dict = vae_model['autoencoder_state_dict']
-    autoencoderkl.load_state_dict(new_state_dict)
-autoencoderkl = autoencoderkl.to(device).half()
+autoencoderkl = load_model(  config = vae_config['autoencoder'],
+                    model_class = AutoencoderKL, 
+                    file_prefix = 'vae', 
+                    model_prefix = 'autoencoder',
+                    device = device)
+autoencoderkl = autoencoderkl.half()
 
-#Latent Diffsuion Model
-unet_config = ldm_config['unet']
-unet = DiffusionModelUNet(**unet_config).to(device)
+# Latent Diffsuion UNet
+unet = DiffusionModelUNet(**ldm_config['unet']).to(device)
 unet = torch.nn.DataParallel(unet)
 
 # Optimizer
@@ -104,12 +96,9 @@ scaler = GradScaler()
 # DDPM Scheduler
 scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
 
-# Initialization
-start_epoch = 0
-checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
-
 # Upload Parameters from Checkpoint
 if checkpoint_path:
+    checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
@@ -121,8 +110,8 @@ if checkpoint_path:
     val_losses = checkpoint['val_losses']
     val_epochs = checkpoint['val_epochs']
     lr_rates = checkpoint['lr_rates']
-    print_with_timestamp(f"Resuming from epoch {start_epoch}...")
 else:
+    start_epoch = 0
     epoch_losses = []
     val_losses = []
     val_epochs = []
@@ -198,34 +187,48 @@ for epoch in range(start_epoch, n_epochs):
         print(f"Epoch {epoch} val loss: {val_loss:.4f}")
 
     if epoch % num_epochs_checkpoints == 0 and epoch > 0:
-        save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_checkpoint_epoch_{epoch}.pth')
-    
+        save_checkpoint(
+            epoch, f'ldm_checkpoint_epoch_{epoch}.pth',
+            unet_state_dict = unet.module.state_dict(),
+            optimizer_state_dict = optimizer.state_dict(),
+            scaler_state_dict = scaler.state_dict(),
+            scheduler_state_dict = scheduler.state_dict(),
+            scheduler_lr_state_dict = scheduler_lr.state_dict(),
+            epoch_losses = epoch_losses,
+            val_losses = val_losses,
+            scale_factor = scale_factor,
+            val_epochs = val_epochs,
+            lr_rates = lr_rates
+        )
+
     if epoch > val_interval:
-        fig, ax1 = plt.subplots(figsize=(10, 5))
-        color = 'tab:blue'
-        ax1.set_title('Learning Curves and Learning Rate', fontsize=20)
-        ax1.set_xlabel('Epochs', fontsize=16)
-        ax1.set_xticks(range(0, epoch + 1, 10))
-        ax1.set_ylabel('Loss', fontsize=16, color=color)
-        ax1.plot(range(epoch + 1), epoch_losses, color=color, label="Train")
-        ax1.plot(val_epochs, val_losses, 'b--', label="Validation")
-        ax1.tick_params(axis='y', labelcolor=color)
-        ax2 = ax1.twinx()
-        color = 'tab:red'
-        ax2.set_ylabel('Learning Rate', fontsize=16, color=color)
-        ax2.plot(val_epochs, lr_rates, color=color, label='Learning Rate')
-        ax2.tick_params(axis='y', labelcolor=color)
-        fig.tight_layout()
-        fig.legend(loc="upper right", bbox_to_anchor=(0.8,0.9))
-        plt.savefig('LDM_learning_curves.png')
-        plt.close()
+        plot_learning_curves(epoch_losses = epoch_losses,
+                            val_losses = val_losses,
+                            lr_rates = lr_rates, 
+                            epoch = epoch, 
+                            val_epochs = val_epochs,
+                            lr_rates_g = None, 
+                            lr_rates_d = None,
+                            save_path = 'LDM_learning_curves.png')
 
 progress_bar.close()
 
 
 now = datetime.now()
 date_time = now.strftime("%Y%m%d_%H%M")
-save_checkpoint_ldm(epoch, unet, optimizer, scaler, scheduler, scheduler_lr, scale_factor, epoch_losses, val_losses, val_epochs, lr_rates, f'ldm_model_{date_time}.pth')
+save_checkpoint(
+    epoch, f'ldm_model_{date_time}.pth',
+    unet_state_dict = unet.module.state_dict(),
+    optimizer_state_dict = optimizer.state_dict(),
+    scaler_state_dict = scaler.state_dict(),
+    scheduler_state_dict = scheduler.state_dict(),
+    scheduler_lr_state_dict = scheduler_lr.state_dict(),
+    epoch_losses = epoch_losses,
+    val_losses = val_losses,
+    scale_factor = scale_factor,
+    val_epochs = val_epochs,
+    lr_rates = lr_rates
+)
 
 # Store generated output  
 autoencoderkl = autoencoderkl.to(device).float()
@@ -255,11 +258,11 @@ for i in range(number_of_samples):
     # Decode latent representation of the intermediary images
     with torch.no_grad():
         # Concatenating the images for each channel (first two channels in this case) and then all channels together
-        concat_channels = [torch.cat([img[:, j, :, :].unsqueeze(1) for img in intermediates], dim=-1) for j in range(number_of_channels)]
+        concat_channels = [torch.cat([img[:, j, :, :].unsqueeze(1) for img in intermediates], dim=-1) for j in range(len(config['input_channels']))]
         concat_all_channels = torch.cat(concat_channels, dim=-2)
     
     # Plotting
-    fig, ax = plt.subplots(figsize=(12, number_of_channels))
+    fig, ax = plt.subplots(figsize=(12, len(config['input_channels'])))
     im = ax.imshow(concat_all_channels[0, 0].cpu(), cmap="jet", vmin=0, vmax=1)
     # Remove the axis
     ax.axis('off')
@@ -267,9 +270,9 @@ for i in range(number_of_samples):
     # Add the colorbar
     cbar = plt.colorbar(im, ax=ax, fraction=0.015, pad=0.04)
     cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
-    channel_height = concat_all_channels.size(2) // number_of_channels
-    channel_labels = ['Raw', 'Bg', 'Gt']
-    for j in range(number_of_channels):
+    channel_height = concat_all_channels.size(2) // len(config['input_channels'])
+    channel_labels = config['input_channels']
+    for j in range(len(config['input_channels'])):
         ax.text(-150, channel_height * (0.5 + j), channel_labels[j], fontsize=12, va='center', ha='center')
 
     plt.savefig(os.path.join(pkl_dir, f'sample_{i}.png'), dpi=300)
