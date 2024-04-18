@@ -48,6 +48,9 @@ touch $FILEPATH
 ## Save the param.json file to the target directory
 cp -f $P_DIR/params.json $TARGET_DIR
 
+## Copy helper functions
+cp -f $P_DIR/helper_functions.py $SCRATCH_DIR
+
 ## Logging functions definition
 log_and_copy() {
     local src=$1
