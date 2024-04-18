@@ -49,9 +49,9 @@ cn_config = = config['CN']
 
 # Prepare Dataset
 train_dataset, validation_dataset = setup_datasets( args.dataset_file, 
-                                                    config['input_channels'],
-                                                    config['dataset']['condition'],
-                                                    config["dataset"]["validation_split"])
+                                                    config["dataset"]['input_channels'],
+                                                    config["dataset"]["validation_split"],
+                                                    config['dataset']['condition'])
 
 train_loader = DataLoader(  train_dataset, 
                             batch_size=config["dataset"]["batch_size"], 

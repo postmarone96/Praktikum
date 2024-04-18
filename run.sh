@@ -2,16 +2,12 @@
 
 # Collect arguments
 BROKEN_DS=$(jq -r '.broken_ds' params.json)
-SIZE=$(jq -r '.size' params.json)
-GT_TH=$(jq -r '.gt_th' params.json)
+SIZE=$(jq -r 'data.size' params.json)
 MODEL=$(jq -r '.model' params.json)
-LR=$(jq -r '.learning_rate' params.json)
 IDS_FILE=$(jq -r '.ids_file' params.json)
 export BROKEN_DS
 export SIZE
-export GT_TH
 export MODEL
-export LR
 export IDS_FILE
 
 # Project Directory

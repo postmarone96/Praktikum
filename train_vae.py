@@ -49,7 +49,7 @@ args = parser.parse_args()
 
 # Prepare Dataset
 train_dataset, validation_dataset = setup_datasets( args.dataset_file, 
-                                                    config['input_channels'], 
+                                                    config["dataset"]['input_channels'], 
                                                     config["dataset"]["validation_split"])
 
 train_loader = DataLoader(  train_dataset, 

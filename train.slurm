@@ -2,8 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=o_2_%j.txt
-#SBATCH --error=e_2_%j.txt
+#SBATCH --output=o_%j.txt
+#SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
@@ -17,7 +17,7 @@ SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 
-DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5
+DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
 
 if ["$CP_VAE" -ne 0] then
     AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP_VAE.pth"
@@ -114,7 +114,7 @@ if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
     fi
 
     cp $P_DIR/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT --data_size $SIZE --gt_th $GT_TH
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT
     echo "preprocessing completed"
 
 elif  [[ -e "$DATASET" ]] && [["$BROKEN_DS" -eq 0]] ; then
@@ -141,7 +141,7 @@ elif [ "$MODEL" = "ldm" ]; then
     fi 
     cp $AE $SCRATCH_DIR/
     cp $P_DIR/train_ldm.py $SCRATCH_DIR/
-    python -u train_ldm.py --output_file $OUTPUTFILE --lr $LR --data_size $SIZE --job $SLURM_JOB_ID
+    python -u train_ldm.py --dataset_file $PREPROCESSING_OUTPUT --job $SLURM_JOB_ID
     cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
 # Train $CN
@@ -154,7 +154,7 @@ elif [ "$MODEL" = "cn" ]; then
     cp $AE $SCRATCH_DIR/
     cp $LDM $SCRATCH_DIR/
     cp $P_DIR/train_cn.py $SCRATCH_DIR/
-    python -u train_cn.py --output_file $OUTPUTFILE --lr $LR
+    python -u train_cn.py --dataset_file $PREPROCESSING_OUTPUT
 fi
 
 cleanup

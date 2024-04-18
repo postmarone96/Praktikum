@@ -3,107 +3,79 @@ import numpy as np
 import nibabel as nib
 import h5py
 import argparse
+import json
 
-# parser
-parser = argparse.ArgumentParser()
-parser.add_argument("--data_path", type=str, required=True)
-parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--data_size", type=str, required=True)
-parser.add_argument("--gt_th", type=str, required=True)
-args = parser.parse_args()
+def get_file_paths(directory, suffix='.nii.gz'):
+    return sorted([os.path.join(directory, f) for f in os.listdir(directory) if f.endswith(suffix)])
 
 class NiftiPreprocessor:
-    def __init__(self, raw_dir, bg_dir, gt_dir, output_file, data_size):
-        self.data_size = data_size
-        self.raw = sorted([os.path.join(raw_dir, f) for f in os.listdir(raw_dir) if f.endswith('.nii.gz')])
-        self.bg = sorted([os.path.join(bg_dir, f) for f in os.listdir(bg_dir) if f.endswith('.nii.gz')])
-        if self.data_size == 'xs':
-            self.gt = sorted([os.path.join(gt_dir, f) for f in os.listdir(gt_dir) if f.endswith('.nii.gz')])
-        self.output_file = output_file
+    def __init__(self, args, config):
+        self.args = args
+        self.dim = config['data']['dim']
+        self.pad = config['data']['pad']
+        self.size = config['data']['size']
+        self.gt_th = config['data']['gt_th']
+        self.raw = get_file_paths(os.path.join(args.data_path, 'raw'))
+        self.bg = get_file_paths(os.path.join(args.data_path, 'bg'))
+        self.gt = get_file_paths(os.path.join(args.data_path, 'gt')) if self.size == 'xs' else []
+
+    def load_and_preprocess_nifti(self, path, threshold=None):
+        img = nib.load(path).get_fdata()
+        img = np.moveaxis(img, -1, 0) # Reorder to z, x, y
+        if threshold is not None: # Applying threshold for ground truth images
+            img = np.array([(slice > threshold).astype(np.float32) for slice in img])
+        else: # Normalize non-GT images
+            img = np.array([self.normalize_slice(slice) for slice in img])
+        return img
+    
+    def normalize_slice(self, slice):
+        slice = np.pad(slice, pad_width=self.pad, mode='reflect')
+        return slice / np.max(slice)
 
     def process_and_save(self):
-        # Assuming equal number of image and annotation files
-        assert len(self.raw) == len(self.bg), "Mismatch in number files"
-        if self.data_size == 'xs':
-            assert len(self.raw) == len(self.gt), "Mismatch in number gt files "
-            
-        buffer_raw = []
-        buffer_bg = []
-        if self.data_size == 'xs':
-            buffer_gt = []
-
-        with h5py.File(self.output_file, 'w') as f:
-            dset_raw = f.create_dataset('raw', (0, 320, 320), maxshape=(None, 320, 320), chunks=True, compression="gzip", compression_opts=9)
-            dset_bg = f.create_dataset('bg', (0, 320, 320), maxshape=(None, 320, 320), chunks=True, compression="gzip", compression_opts=9)
-            if self.data_size == 'xs':
-                dset_gt = f.create_dataset('gt', (0, 320, 320), maxshape=(None, 320, 320), chunks=True, compression="gzip", compression_opts=9)
+        assert len(self.raw) == len(self.bg), "Mismatch in number of files"
+        if self.size == 'xs':
+            assert len(self.raw) == len(self.gt), "Mismatch in number of gt files"
+        
+        with h5py.File(self.args.output_file, 'w') as f:
+            dsets = {
+                'raw': f.create_dataset('raw', (0, self.dim, self.dim), maxshape=(None, self.dim, self.dim), chunks=True, compression="gzip"),
+                'bg': f.create_dataset('bg', (0, self.dim, self.dim), maxshape=(None, self.dim, self.dim), chunks=True, compression="gzip"),
+                'gt': f.create_dataset('gt', (0, self.dim, self.dim), maxshape=(None, self.dim, self.dim), chunks=True, compression="gzip") if self.size == 'xs' else None
+            }
+            buffers = {key: [] for key in dsets if dsets[key]}
 
             for raw_path, bg_path in zip(self.raw, self.bg):
-                buffer_raw.extend(self.process_single_nifti(raw_path))
-                buffer_bg.extend(self.process_single_nifti(bg_path))
-                if self.data_size == 'xs':
-                    gt_path = self.gt[self.raw.index(raw_path)]  # Match raw and gt files
-                    buffer_gt.extend(self.process_single_nifti_for_masks(gt_path))
+                buffers['raw'].extend(self.load_and_preprocess_nifti(raw_path))
+                buffers['bg'].extend(self.load_and_preprocess_nifti(bg_path))
+                if self.size == 'xs':
+                    gt_path = self.gt[self.raw.index(raw_path)]
+                    buffers['gt'].extend(self.load_and_preprocess_nifti(gt_path, threshold=self.gt_th))
 
-                # Save buffer if it's big enough
-                if len(buffer_raw) >= 30000:
-                    self.save_buffer_to_dataset(dset_raw, buffer_raw)
-                    buffer_raw.clear()
-                if len(buffer_bg) >= 30000:
-                    self.save_buffer_to_dataset(dset_bg, buffer_bg)
-                    buffer_bg.clear()
-                if self.data_size == 'xs'and len(buffer_gt) >= 30000:
-                    self.save_buffer_to_dataset(dset_gt, buffer_gt)
-                    buffer_gt.clear()
-                        
+                for key, buffer in buffers.items():
+                    if len(buffer) >= 30000:
+                        self.save_buffer_to_dataset(dsets[key], buffer)
+                        buffer.clear()
 
-            # If there's any remaining data in the buffers, save them
-            if buffer_raw:
-                self.save_buffer_to_dataset(dset_raw, buffer_raw)
-            if buffer_bg:
-                self.save_buffer_to_dataset(dset_bg, buffer_bg)
-            if self.data_size == 'xs' and buffer_gt:
-                self.save_buffer_to_dataset(dset_gt, buffer_gt)
-
-    def process_single_nifti(self, nii_path):
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        slices_xy = np.moveaxis(image_data, -1, 0)
-        return self.process_slices(slices_xy)
-
-    def process_single_nifti_for_masks(self, nii_path):   
-        img = nib.load(nii_path)
-        image_data = img.get_fdata()
-        slices_xy = np.moveaxis(image_data, -1, 0)
-        return self.process_slices_for_masks(slices_xy)
-
-    def process_slices(self, slices):
-        buffer = []
-        for img in slices:
-            img = np.pad(img, pad_width=10, mode='reflect')
-            max_value = np.max(img)
-            img /= max_value
-            buffer.append(img_cropped)
-        return buffer
-
-    def process_slices_for_masks(self, slices):
-        buffer = []
-        for img in slices:
-            img = np.pad(img, pad_width=10, mode='reflect')
-            max_value = np.max(img)
-            img /= max_value
-            img = (img > args.gt_th).astype(np.float32)
-            buffer.append(img)
-        return buffer
+            for key, buffer in buffers.items():
+                if buffer:
+                    self.save_buffer_to_dataset(dsets[key], buffer)
 
     def save_buffer_to_dataset(self, dataset, buffer):
-        current_length = dataset.shape[0]
-        dataset.resize((current_length + len(buffer), 320, 320))
-        dataset[current_length:current_length + len(buffer)] = np.array(buffer)
+        dataset.resize((dataset.shape[0] + len(buffer), self.dim, self.dim))
+        dataset[-len(buffer):] = buffer
 
-preprocessor = NiftiPreprocessor(raw_dir=os.path.join(args.data_path, 'raw'),
-                                bg_dir=os.path.join(args.data_path, 'bg'),
-                                gt_dir=os.path.join(args.data_path, 'gt'), 
-                                output_file=args.output_file,
-                                data_size=args.data_size)
-preprocessor.process_and_save()
+if __name__ == '__main__':
+    # Args parser
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_path", type=str, required=True)
+    parser.add_argument("--output_file", type=str, required=True)
+    args = parser.parse_args()
+
+    # JSON parser
+    with open('params.json') as json_file:
+        config = json.load(json_file)
+
+    # Run preprocessing and create dataset.hdf5 
+    preprocessor = NiftiPreprocessor(args, config)
+    preprocessor.process_and_save()

@@ -31,7 +31,7 @@ class NiftiHDF5Dataset(Dataset):
                 combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
 
-def setup_datasets(hdf5_file, input_channels, condition=None, validation_split):
+def setup_datasets(hdf5_file, input_channels, validation_split, condition=None):
     """
     Prepares and splits the dataset into training and validation subsets.
     """
@@ -59,7 +59,6 @@ def save_checkpoint(epoch, filename, **components):
         else:
             checkpoint[key] = value
     torch.save(checkpoint, filename)
-
 
 def load_model(config, model_class, file_prefix, model_prefix, device):
     """
