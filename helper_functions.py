@@ -31,20 +31,26 @@ class NiftiHDF5Dataset(Dataset):
                 combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
 
-def setup_datasets(hdf5_file, input_channels, validation_split, condition=None):
+def setup_datasets(hdf5_file, input_channels, validation_split=0, condition=None):
     """
     Prepares and splits the dataset into training and validation subsets.
+    If validation_split is 0, all data will be used for training, otherwise it will be split.
     """
     dataset = NiftiHDF5Dataset(hdf5_file, input_channels, condition)
-    dataset_size = len(dataset)
-    indices = torch.randperm(dataset_size).tolist()
-
-    validation_size = int(validation_split * dataset_size)
-    training_size = dataset_size - validation_size
-    train_indices, val_indices = indices[:training_size], indices[training_size:]
-
-    train_dataset = Subset(dataset, train_indices)
-    validation_dataset = Subset(dataset, val_indices)
+    
+    if validation_split > 0:
+        # Calculate the size and split points for validation and training sets
+        dataset_size = len(dataset)
+        indices = torch.randperm(dataset_size).tolist()
+        validation_size = int(validation_split * dataset_size)
+        training_size = dataset_size - validation_size
+        train_indices, val_indices = indices[:training_size], indices[training_size:]
+        validation_dataset = Subset(dataset, val_indices)
+        train_dataset = Subset(dataset, train_indices)
+    else:
+        # Use entire dataset as the training set if no validation split is specified
+        train_dataset = dataset
+        validation_dataset = None
 
     return train_dataset, validation_dataset
 
