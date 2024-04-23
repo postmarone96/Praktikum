@@ -47,8 +47,7 @@ vae_config = config['VAE']
 ldm_config = config['LDM']
 cn_config = = config['CN']
 
-
-
+# set device
 device = torch.device("cuda")
 
 # Visual Auto Encoder

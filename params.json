@@ -160,6 +160,8 @@
       "val_interval": 2,
       "num_epochs_checkpoint": 5
     }
-  }
+  },
+
+  "CN_Inf":""
 }
 
