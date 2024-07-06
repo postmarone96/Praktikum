@@ -2,8 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --output=o_%j.txt
-#SBATCH --error=e_%j.txt
+#SBATCH --output=job_%j/output.txt
+#SBATCH --error=job_%j/error.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
@@ -108,6 +108,7 @@ BACKUP_PID=$!
 if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
     if [ "$SIZE" = 'xl' ]; then
         cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
+        cp $IDS_FILE $TARGET_DIR/
         python -u cp_xl_data.py --target_dir $SCRATCH_DIR --bg $BG_XL --raw $RAW_XL --ids $IDS_FILE
 
     elif [ "$SIZE" = 'xs' ]; then

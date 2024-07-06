@@ -2,8 +2,8 @@
   "broken_ds": 0,
   "model": "vae",
   "learning_rate": 6,
-  "project_dir": "$HOME/Praktikum/",
-  "ids_file": "$HOME/Praktikum/ids.txt",
+  "project_dir": "/home/viro/marouane.hajri/Praktikum/",
+  "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
   "data":{
     "dim": 320,
