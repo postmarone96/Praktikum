@@ -6,8 +6,8 @@
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 mkdir -p $TARGET_DIR
 
-#SBATCH --output=job_%j/output.txt
-#SBATCH --error=job_%j/error.txt
+#SBATCH --output=$TARGET_DIR/output.txt
+#SBATCH --error=$TARGET_DIR/error.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
