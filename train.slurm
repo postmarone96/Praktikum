@@ -36,18 +36,22 @@ FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
 ## Create the directories
+echo "Creating directories..."
 mkdir -p "$SCRATCH_DIR/bg" "$SCRATCH_DIR/raw" "$SCRATCH_DIR/gt" "$TARGET_DIR"
 touch "$FILEPATH"
 
 ## Link the Job logfiles to the logfiles in the job directory
+echo "Linking job logfiles..."
 ln -f "o_$SLURM_JOB_ID.txt" "$TARGET_DIR/output.txt"
 ln -f "e_$SLURM_JOB_ID.txt" "$TARGET_DIR/error.txt"
 
 ## Save the param.json file to the target directory and scratch directory
+echo "Copying param.json..."
 cp -f "$P_DIR/params.json" "$TARGET_DIR"
 cp -f "$P_DIR/params.json" "$SCRATCH_DIR"
 
 ## Copy helper functions
+echo "Copying helper functions..."
 cp -f "$P_DIR/helper_functions.py" "$SCRATCH_DIR"
 
 ## Logging functions definition
@@ -60,6 +64,7 @@ log_and_copy() {
 
 periodic_backup() {
     while true; do
+        echo "Performing periodic backup..."
         sleep 4m
         find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
             basefile=$(basename "$file")
@@ -126,19 +131,23 @@ check_remaining_time_and_cleanup() {
 }
 
 # Run the check_remaining_time_and_cleanup function in the background
+echo "Starting time check..."
 check_remaining_time_and_cleanup &
 
 # Change to local scratch directory
+echo "Changing to scratch directory..."
 cd "$SCRATCH_DIR"
 
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
+echo "Starting periodic backup..."
 periodic_backup &
 BACKUP_PID=$!
 
 # Data Preprocessing
+echo "Starting data preprocessing..."
 if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
     if [ "$SIZE" = 'xl' ]; then
         cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
