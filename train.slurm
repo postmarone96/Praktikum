@@ -12,6 +12,9 @@
 #SBATCH --qos=gpu_normal
 ##SBATCH -w supergpu02
 
+## Start timer
+start_time=$(date +%s)
+
 ## Directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
@@ -112,8 +115,8 @@ check_remaining_time_and_cleanup() {
         current_time=$(date +%s)
         echo "current_time : $current_time"
         # Calculate the elapsed time since the job started
-        elapsed_seconds=$((current_time - SLURM_JOB_START_TIME))
-        echo "job_start_time: $SLURM_JOB_START_TIME"
+        elapsed_seconds=$((current_time - start_time))
+        echo "job_start_time: $start_time"
         # Calculate the remaining time
         remaining_time=$((total_time - elapsed_seconds))
         
