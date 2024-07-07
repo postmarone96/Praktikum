@@ -43,8 +43,9 @@ touch $FILEPATH
 ln -f o_$SLURM_JOB_ID.txt $TARGET_DIR/output.txt
 ln -f e_$SLURM_JOB_ID.txt $TARGET_DIR/error.txt
 
-## Save the param.json file to the target directory
+## Save the param.json file to the target directory and scratch directory
 cp -f $P_DIR/params.json $TARGET_DIR
+cp -f $P_DIR/params.json $SCRATCH_DIR
 
 ## Copy helper functions
 cp -f $P_DIR/helper_functions.py $SCRATCH_DIR
@@ -86,8 +87,8 @@ cleanup() {
         fi
     done
     ## remove the output and error because they are already stored in the job file
-    ## rm o_$SLURM_JOB_ID.txt
-    ## rm e_$SLURM_JOB_ID.txt
+    rm o_$SLURM_JOB_ID.txt
+    rm e_$SLURM_JOB_ID.txt
 
     kill $BACKUP_PID
     rm -rf $SCRATCH_DIR
