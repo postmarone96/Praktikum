@@ -92,8 +92,8 @@ cleanup() {
         fi
     done
     # remove the output and error because they are already stored in the job file
-    rm o_$SLURM_JOB_ID.txt
-    rm e_$SLURM_JOB_ID.txt
+    ## rm o_$SLURM_JOB_ID.txt
+    ## rm e_$SLURM_JOB_ID.txt
 
     kill $BACKUP_PID
     rm -rf $SCRATCH_DIR
