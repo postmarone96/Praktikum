@@ -20,6 +20,7 @@ import pickle
 import zipfile
 import shutil
 import json
+import signal
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,6 +39,9 @@ from generative.networks.schedulers import DDPMScheduler
 
 # clear CUDA
 torch.cuda.empty_cache()
+
+# Register the signal handler
+signal.signal(signal.SIGTERM, cleanup)
 
 # parser
 parser = argparse.ArgumentParser()
@@ -130,86 +134,89 @@ val_interval = ldm_config['training']['val_interval']
 num_epochs_checkpoints = ldm_config['training']['num_epochs_checkpoint']
 
 # Start training
-for epoch in range(start_epoch, n_epochs):
-    unet.train()
-    autoencoderkl.eval()
-    epoch_loss = 0
-    progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
-    progress_bar.set_description(f"Epoch {epoch}")
-    for step, batch in progress_bar:
-        images = batch.to(device)
-        optimizer.zero_grad(set_to_none=True)
-        with autocast(enabled=True):
-            z_mu, z_sigma = autoencoderkl.encode(images)
-            z = autoencoderkl.sampling(z_mu, z_sigma)
-            noise = torch.randn_like(z).to(device)
-            timesteps = torch.randint(0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device).long()
-            noise_pred = inferer(
-                inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps, autoencoder_model=autoencoderkl
+try:
+    for epoch in range(start_epoch, n_epochs):
+        unet.train()
+        autoencoderkl.eval()
+        epoch_loss = 0
+        progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
+        progress_bar.set_description(f"Epoch {epoch}")
+        for step, batch in progress_bar:
+            images = batch.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            with autocast(enabled=True):
+                z_mu, z_sigma = autoencoderkl.encode(images)
+                z = autoencoderkl.sampling(z_mu, z_sigma)
+                noise = torch.randn_like(z).to(device)
+                timesteps = torch.randint(0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device).long()
+                noise_pred = inferer(
+                    inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps, autoencoder_model=autoencoderkl
+                )
+                loss = F.mse_loss(noise_pred.float(), noise.float())
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            epoch_loss += loss.item()
+            progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
+        epoch_losses.append(epoch_loss / (step + 1))
+
+        if epoch % val_interval == 0 and epoch > 0:
+            val_epochs.append(epoch)
+            unet.eval()
+            val_loss = 0
+            with torch.no_grad():
+                for val_step, batch in enumerate(val_loader, start=1):
+                    images = batch.to(device)
+                    with autocast(enabled=True):
+                        z_mu, z_sigma = autoencoderkl.encode(images)
+                        z = autoencoderkl.sampling(z_mu, z_sigma)
+                        noise = torch.randn_like(z).to(device)
+                        timesteps = torch.randint(
+                            0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
+                        ).long()
+                        noise_pred = inferer(
+                            inputs=images,
+                            diffusion_model=unet,
+                            noise=noise,
+                            timesteps=timesteps,
+                            autoencoder_model=autoencoderkl,
+                        )
+                        loss = F.mse_loss(noise_pred.float(), noise.float())
+                    val_loss += loss.item()
+            val_loss /= val_step
+            scheduler_lr.step(val_loss)
+            lr_unet = optimizer.param_groups[0]['lr']
+            lr_rates.append(lr_unet)
+            val_losses.append(val_loss)
+            print(f"Epoch {epoch} val loss: {val_loss:.4f}")
+
+        if epoch % num_epochs_checkpoints == 0 and epoch > 0:
+            save_checkpoint(
+                epoch, f'ldm_checkpoint_epoch_{epoch}.pth',
+                unet_state_dict = unet.module.state_dict(),
+                optimizer_state_dict = optimizer.state_dict(),
+                scaler_state_dict = scaler.state_dict(),
+                scheduler_state_dict = scheduler.state_dict(),
+                scheduler_lr_state_dict = scheduler_lr.state_dict(),
+                epoch_losses = epoch_losses,
+                val_losses = val_losses,
+                scale_factor = scale_factor,
+                val_epochs = val_epochs,
+                lr_rates = lr_rates
             )
-            loss = F.mse_loss(noise_pred.float(), noise.float())
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-        epoch_loss += loss.item()
-        progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
-    epoch_losses.append(epoch_loss / (step + 1))
 
-    if epoch % val_interval == 0 and epoch > 0:
-        val_epochs.append(epoch)
-        unet.eval()
-        val_loss = 0
-        with torch.no_grad():
-            for val_step, batch in enumerate(val_loader, start=1):
-                images = batch.to(device)
-                with autocast(enabled=True):
-                    z_mu, z_sigma = autoencoderkl.encode(images)
-                    z = autoencoderkl.sampling(z_mu, z_sigma)
-                    noise = torch.randn_like(z).to(device)
-                    timesteps = torch.randint(
-                        0, inferer.scheduler.num_train_timesteps, (z.shape[0],), device=z.device
-                    ).long()
-                    noise_pred = inferer(
-                        inputs=images,
-                        diffusion_model=unet,
-                        noise=noise,
-                        timesteps=timesteps,
-                        autoencoder_model=autoencoderkl,
-                    )
-                    loss = F.mse_loss(noise_pred.float(), noise.float())
-                val_loss += loss.item()
-        val_loss /= val_step
-        scheduler_lr.step(val_loss)
-        lr_unet = optimizer.param_groups[0]['lr']
-        lr_rates.append(lr_unet)
-        val_losses.append(val_loss)
-        print(f"Epoch {epoch} val loss: {val_loss:.4f}")
-
-    if epoch % num_epochs_checkpoints == 0 and epoch > 0:
-        save_checkpoint(
-            epoch, f'ldm_checkpoint_epoch_{epoch}.pth',
-            unet_state_dict = unet.module.state_dict(),
-            optimizer_state_dict = optimizer.state_dict(),
-            scaler_state_dict = scaler.state_dict(),
-            scheduler_state_dict = scheduler.state_dict(),
-            scheduler_lr_state_dict = scheduler_lr.state_dict(),
-            epoch_losses = epoch_losses,
-            val_losses = val_losses,
-            scale_factor = scale_factor,
-            val_epochs = val_epochs,
-            lr_rates = lr_rates
-        )
-
-    if epoch > val_interval:
-        plot_learning_curves(epoch_losses = epoch_losses,
-                            val_losses = val_losses,
-                            lr_rates = lr_rates, 
-                            epoch = epoch, 
-                            val_epochs = val_epochs,
-                            lr_rates_g = None, 
-                            lr_rates_d = None,
-                            save_path = 'LDM_learning_curves.png')
-
+        if epoch > val_interval:
+            plot_learning_curves(epoch_losses = epoch_losses,
+                                val_losses = val_losses,
+                                lr_rates = lr_rates, 
+                                epoch = epoch, 
+                                val_epochs = val_epochs,
+                                lr_rates_g = None, 
+                                lr_rates_d = None,
+                                save_path = 'LDM_learning_curves.png')
+except KeyboardInterrupt:
+    cleanup(signal.SIGINT, None, train_dataset, validation_dataset)
+    
 progress_bar.close()
 
 

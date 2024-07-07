@@ -2,9 +2,10 @@ from datetime import datetime
 import h5py
 import torch
 import glob
+import signal
 from torch.utils.data import Dataset, Subset
 import matplotlib.pyplot as plt
-
+import sys
 
 class NiftiHDF5Dataset(Dataset):
     """
@@ -14,22 +15,26 @@ class NiftiHDF5Dataset(Dataset):
         self.hdf5_file = hdf5_file
         self.input_channels = input_channels
         self.condition = condition
+        self.file = h5py.File(hdf5_file, 'r')
 
     def __len__(self):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            return len(f[next(iter(self.input_channels))])
+        return len(self.file[next(iter(self.input_channels))])
 
     def __getitem__(self, idx):
-        with h5py.File(self.hdf5_file, 'r') as f:
-            data_tensors = [torch.tensor(f[channel][idx], dtype=torch.float32) for channel in self.input_channels]
-            if condition:
-                combined = {}
-                cond_tensor = [torch.tensor(f[channel][idx], dtype=torch.float32) for channel in self.condition]
-                combined['image'] = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
-                combined['cond'] = torch.stack(cond_tensor, dim=0) if len(cond_tensor) > 1 else cond_tensor[0].unsqueeze(0)
-            else:    
-                combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
+        data_tensors = [torch.tensor(self.file[channel][idx], dtype=torch.float32) for channel in self.input_channels]
+        if self.condition:
+            combined = {}
+            cond_tensor = [torch.tensor(self.file[channel][idx], dtype=torch.float32) for channel in self.condition]
+            combined['image'] = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
+            combined['cond'] = torch.stack(cond_tensor, dim=0) if len(cond_tensor) > 1 else cond_tensor[0].unsqueeze(0)
+        else:    
+            combined = torch.stack(data_tensors, dim=0) if len(data_tensors) > 1 else data_tensors[0].unsqueeze(0)
         return combined
+
+    def __del__(self):
+        if self.file:
+            self.file.close()
+            print(f"HDF5 file {self.hdf5_file} closed.")
 
 def setup_datasets(hdf5_file, input_channels, validation_split=0, condition=None):
     """
@@ -123,4 +128,8 @@ def print_with_timestamp(message):
     current_time = datetime.now()
     print(f"{current_time} - {message}")
 
-
+def cleanup(signum, frame, train_dataset, validation_dataset):
+    print("Received termination signal. Performing cleanup...")
+    del train_dataset
+    del validation_dataset
+    sys.exit(0)

@@ -17,6 +17,7 @@ import os
 import argparse
 import glob
 import json
+import signal
 from datetime import datetime
 import numpy as np
 import torch
@@ -33,6 +34,9 @@ from generative.networks.schedulers import DDPMScheduler
 
 # clear CUDA
 torch.cuda.empty_cache()
+
+# Register the signal handler
+signal.signal(signal.SIGTERM, cleanup)
 
 # parser
 parser = argparse.ArgumentParser()
@@ -142,136 +146,141 @@ val_interval = cn_config['training']['val_interval']
 num_epochs_checkpoints = cn_config['training']['num_epochs_checkpoint']
 
 # Start training
-for epoch in range(start_epoch, n_epochs):
-    # Set models to training mode
-    controlnet.train()
+try:
+    for epoch in range(start_epoch, n_epochs):
+        # Set models to training mode
+        controlnet.train()
 
-    # Initialize epoch losses
-    epoch_loss = 0
+        # Initialize epoch losses
+        epoch_loss = 0
 
-    # Display progress bar
-    progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
-    progress_bar.set_description(f"Epoch {epoch}")
+        # Display progress bar
+        progress_bar = tqdm(enumerate(train_loader), total=len(train_loader), ncols=70)
+        progress_bar.set_description(f"Epoch {epoch}")
 
-    for step, batch in progress_bar:
+        for step, batch in progress_bar:
 
-        images = batch["image"].to(device)
-        masks = batch["cond"].to(device)
-
-        #  Zero the gradients of the optimizer
-        optimizer.zero_grad(set_to_none=True)
-
-        # Forward pass with gradient scaling
-        with autocast(enabled=True):
-            # Input encoding
-            with torch.no_grad():
-                e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
-            
-            # Generate random noise
-            noise = torch.randn_like(e).to(device)
-            
-            # Generate random timesteps for diffusion model conditioning
-            timesteps = torch.randint(
-                0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
-            ).long()
-
-            # ControlNet foward pass
-            noise_pred = controlnet_inferer(inputs=e,
-                                    diffusion_model=unet,
-                                    controlnet=controlnet,
-                                    noise=noise,
-                                    timesteps=timesteps,
-                                    cn_cond=masks,
-            )
-
-            # Calculate MSE loss 
-            loss = F.mse_loss(noise_pred.float(), noise.float())
-
-        # Backpropagate and update weights
-        scaler.scale(loss).backward()
-        scaler.step(optimizer)
-        scaler.update()
-        
-        # Append Losses
-        epoch_loss += loss.item()
-
-        progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
-    epoch_losses.append(epoch_loss / (step + 1))
-
-    # Validation loop
-    if epoch % val_interval == 0 and epoch > 0:
-        val_epochs.append(epoch)
-        
-        # Set Controlnet in eval mode
-        controlnet.eval()
-
-        val_epoch_loss = 0
-        for step, batch in enumerate(val_loader):
             images = batch["image"].to(device)
             masks = batch["cond"].to(device)
-            with torch.no_grad():
-                with autocast(enabled=True):
-                    # Input encoding
+
+            #  Zero the gradients of the optimizer
+            optimizer.zero_grad(set_to_none=True)
+
+            # Forward pass with gradient scaling
+            with autocast(enabled=True):
+                # Input encoding
+                with torch.no_grad():
                     e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
+                
+                # Generate random noise
+                noise = torch.randn_like(e).to(device)
+                
+                # Generate random timesteps for diffusion model conditioning
+                timesteps = torch.randint(
+                    0, inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
+                ).long()
 
-                    # Random noise generation
-                    noise = torch.randn_like(e).to(device)
+                # ControlNet foward pass
+                noise_pred = controlnet_inferer(inputs=e,
+                                        diffusion_model=unet,
+                                        controlnet=controlnet,
+                                        noise=noise,
+                                        timesteps=timesteps,
+                                        cn_cond=masks,
+                )
 
-                    # Generate random timesteps for diffusion model conditioning
-                    timesteps = torch.randint(
-                        0, controlnet_inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
-                    ).long()
+                # Calculate MSE loss 
+                loss = F.mse_loss(noise_pred.float(), noise.float())
 
-                    # Controlnet foward pass
-                    noise_pred = controlnet_inferer(inputs=e,
-                                    diffusion_model=unet,
-                                    controlnet=controlnet,
-                                    noise=noise,
-                                    timesteps=timesteps,
-                                    cn_cond=masks,
-                    )
+            # Backpropagate and update weights
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            
+            # Append Losses
+            epoch_loss += loss.item()
 
-                    # MSE loss calculation
-                    val_loss = F.mse_loss(noise_pred.float(), noise.float())
+            progress_bar.set_postfix({"loss": epoch_loss / (step + 1)})
+        epoch_losses.append(epoch_loss / (step + 1))
 
-            val_epoch_loss += val_loss.item()
-            progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
-            print(val_loss)
-            break # Break after first batch of validation data
-        
-        # Adjust learning rate 
-        scheduler_lr.step(val_epoch_loss / (step + 1)) 
+        # Validation loop
+        if epoch % val_interval == 0 and epoch > 0:
+            val_epochs.append(epoch)
+            
+            # Set Controlnet in eval mode
+            controlnet.eval()
 
-        # Record learning rate and validaion losses
-        lr_unet = optimizer.param_groups[0]['lr']
-        lr_rates.append(lr_unet)
-        val_losses.append(val_epoch_loss / (step + 1))
+            val_epoch_loss = 0
+            for step, batch in enumerate(val_loader):
+                images = batch["image"].to(device)
+                masks = batch["cond"].to(device)
+                with torch.no_grad():
+                    with autocast(enabled=True):
+                        # Input encoding
+                        e = autoencoderkl.encode_stage_2_inputs(images) * scale_factor
 
-    # Save checkpoints at specified epoch interval
-    if (epoch % num_epochs_checkpoints == 0 and epoch > 0 and epoch < 100) or (epoch % 20 == 0 and epoch > 100 and num_epochs_checkpoints <= 20):
-        save_checkpoint(
-            epoch, f'cn_checkpoint_epoch_{epoch}.pth',
-            cn_state_dict = controlnet.module.state_dict(),
-            unet_state_dict = unet.module.state_dict(),
-            optimizer_state_dict= optimizer.state_dict(),
-            scaler_state_dict = scaler.state_dict(),
-            scheduler_state_dict = scheduler.state_dict(),
-            scheduler_lr_state_dict = scheduler_lr.state_dict(),
-            epoch_losses = epoch_losses,
-            val_losses = val_losses,
-            val_epochs = val_epochs,
-            lr_rates = lr_rates
-        )
-    # Plot learning curves and learning rates    
-    if epoch > val_interval:
-        plot_learning_curves(epoch_losses = epoch_losses,
-                    val_losses = val_losses,
-                    lr_rates = lr_rates, 
-                    epoch = epoch, 
-                    val_epochs = val_epochs,
-                    lr_rates_g = None, 
-                    lr_rates_d = None,
-                    save_path = 'CN_learning_curves.png')
+                        # Random noise generation
+                        noise = torch.randn_like(e).to(device)
+
+                        # Generate random timesteps for diffusion model conditioning
+                        timesteps = torch.randint(
+                            0, controlnet_inferer.scheduler.num_train_timesteps, (e.shape[0],), device=e.device
+                        ).long()
+
+                        # Controlnet foward pass
+                        noise_pred = controlnet_inferer(inputs=e,
+                                        diffusion_model=unet,
+                                        controlnet=controlnet,
+                                        noise=noise,
+                                        timesteps=timesteps,
+                                        cn_cond=masks,
+                        )
+
+                        # MSE loss calculation
+                        val_loss = F.mse_loss(noise_pred.float(), noise.float())
+
+                val_epoch_loss += val_loss.item()
+                progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
+                print(val_loss)
+                break # Break after first batch of validation data
+            
+            # Adjust learning rate 
+            scheduler_lr.step(val_epoch_loss / (step + 1)) 
+
+            # Record learning rate and validaion losses
+            lr_unet = optimizer.param_groups[0]['lr']
+            lr_rates.append(lr_unet)
+            val_losses.append(val_epoch_loss / (step + 1))
+
+        # Save checkpoints at specified epoch interval
+        if (epoch % num_epochs_checkpoints == 0 and epoch > 0 and epoch < 100) or (epoch % 20 == 0 and epoch > 100 and num_epochs_checkpoints <= 20):
+            save_checkpoint(
+                epoch, f'cn_checkpoint_epoch_{epoch}.pth',
+                cn_state_dict = controlnet.module.state_dict(),
+                unet_state_dict = unet.module.state_dict(),
+                optimizer_state_dict= optimizer.state_dict(),
+                scaler_state_dict = scaler.state_dict(),
+                scheduler_state_dict = scheduler.state_dict(),
+                scheduler_lr_state_dict = scheduler_lr.state_dict(),
+                epoch_losses = epoch_losses,
+                val_losses = val_losses,
+                val_epochs = val_epochs,
+                lr_rates = lr_rates
+            )
+        # Plot learning curves and learning rates    
+        if epoch > val_interval:
+            plot_learning_curves(epoch_losses = epoch_losses,
+                        val_losses = val_losses,
+                        lr_rates = lr_rates, 
+                        epoch = epoch, 
+                        val_epochs = val_epochs,
+                        lr_rates_g = None, 
+                        lr_rates_d = None,
+                        save_path = 'CN_learning_curves.png')
+
+except KeyboardInterrupt:
+    cleanup(signal.SIGINT, None, train_dataset, validation_dataset)
+
 progress_bar.close()
 
 # Save last checkpoint as model

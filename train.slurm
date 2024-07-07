@@ -2,6 +2,8 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
+#SBATCH --output=o_%j.txt
+#SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
@@ -10,16 +12,10 @@
 #SBATCH --qos=gpu_normal
 ##SBATCH -w supergpu02
 
-TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-mkdir -p $TARGET_DIR
-
-#SBATCH --output=$TARGET_DIR/output.txt
-#SBATCH --error=$TARGET_DIR/error.txt
-
 ## directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
-#TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
 
@@ -39,7 +35,7 @@ CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP_CN.pth"
 
 
 FILENAME=$(date "+%Y%m%d.txt")
-#FILEPATH="$TARGET_DIR/$FILENAME"
+FILEPATH="$TARGET_DIR/$FILENAME"
 
 ## Create the directories
 mkdir -p $SCRATCH_DIR
@@ -48,6 +44,10 @@ mkdir -p $SCRATCH_DIR/raw
 mkdir -p $SCRATCH_DIR/gt
 mkdir -p $TARGET_DIR
 touch $FILEPATH
+
+## link the Job logfiles to the logfiles in the job directory
+ln -f o_$SLURM_JOB_ID.txt $TARGET_DIR/output.txt
+ln -f e_$SLURM_JOB_ID.txt $TARGET_DIR/error.txt
 
 ## Save the param.json file to the target directory
 cp -f $P_DIR/params.json $TARGET_DIR
@@ -91,12 +91,47 @@ cleanup() {
             fi
         fi
     done
+    # remove the output and error because they are already stored in the job file
+    rm o_$SLURM_JOB_ID.txt
+    rm e_$SLURM_JOB_ID.txt
+
     kill $BACKUP_PID
     rm -rf $SCRATCH_DIR
     echo "Cleanup complete."
 }
 
 trap 'cleanup' SIGTERM
+
+# Function to check remaining time and perform cleanup if necessary
+check_remaining_time_and_cleanup() {
+    while true; do
+        # Get the total job time (2 days in seconds)
+        total_time=$((2 * 24 * 3600))
+        # Get the elapsed time of the job
+        elapsed_time=$(scontrol show job $SLURM_JOB_ID | awk -F= '/RunTime=/ {print $2}' | awk -F, '{print $1}')
+        
+        # Convert elapsed time to seconds (HH:MM:SS format)
+        IFS=: read -r hours minutes seconds <<< "$elapsed_time"
+        elapsed_seconds=$((10#$hours*3600 + 10#$minutes*60 + 10#$seconds))
+        
+        # Calculate remaining time
+        remaining_time=$((total_time - elapsed_seconds))
+        
+        # If remaining time is less than 15 minutes, perform cleanup
+        if [ "$remaining_time" -lt 900 ]; then
+            echo "Remaining time is less than 15 minutes. Performing cleanup..."
+            # Send SIGTERM signal to the Python process group
+            kill -s SIGTERM -- -$$
+            break
+        fi
+        
+        # Sleep for a specified interval before checking again (e.g., every 10 minutes)
+        sleep 600
+    done
+}
+
+# Run the check_remaining_time_and_cleanup function in the background
+check_remaining_time_and_cleanup &
 
 # Change to local scratch directory
 cd $SCRATCH_DIR
@@ -164,5 +199,7 @@ elif [ "$MODEL" = "cn" ]; then
     cp $P_DIR/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --dataset_file $PREPROCESSING_OUTPUT
 fi
+
+wait 
 
 cleanup
