@@ -19,15 +19,15 @@ TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
 
-if ["$CP_VAE" -ne 0] then
+if ["$CP_VAE" -ne 0]; then
     AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP_VAE.pth"
-elif ["$CP_VAE" -eq 0] then
+elif ["$CP_VAE" -eq 0]; then
     AE="$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth"
 fi
 
-if ["$CP_LDM" -ne 0] then
+if ["$CP_LDM" -ne 0]; then
     LDM_CHECKPOINT="$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP_LDM.pth"
-elif ["$CP_LDM" -eq 0] then
+elif ["$CP_LDM" -eq 0]; then
     LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
 fi
 
@@ -160,7 +160,7 @@ if [[ ! -e "$DATASET" ]] || [["$BROKEN_DS" -eq 1]]; then
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT
     echo "preprocessing completed"
 
-elif  [[ -e "$DATASET" ]] && [["$BROKEN_DS" -eq 0]] ; then
+elif  [[ -e "$DATASET" ]] && [["$BROKEN_DS" -eq 0]]; then
     cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
