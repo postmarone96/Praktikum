@@ -110,13 +110,15 @@ check_remaining_time_and_cleanup() {
         
         # Get the current time in seconds since the epoch
         current_time=$(date +%s)
-        
+        echo "current_time : $current_time"
         # Calculate the elapsed time since the job started
         elapsed_seconds=$((current_time - SLURM_JOB_START_TIME))
-        
+        echo "job_start_time: $SLURM_JOB_START_TIME"
         # Calculate the remaining time
         remaining_time=$((total_time - elapsed_seconds))
         
+        echo "Elapsed time: $elapsed_seconds seconds"
+        echo "Remaining time: $remaining_time seconds"
         # If remaining time is less than 15 minutes, perform cleanup
         if [ "$remaining_time" -lt 900 ]; then
             echo "Remaining time is less than 15 minutes. Performing cleanup..."
