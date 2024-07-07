@@ -2,9 +2,12 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-#SBATCH --chdir= job_%j
-#SBATCH --output=o_%j.txt
-#SBATCH --error=e_%j.txt
+
+TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+mkdir -p $TARGET_DIR
+
+#SBATCH --output=job_%j/output.txt
+#SBATCH --error=job_%j/error.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
@@ -16,7 +19,7 @@
 ## directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
-TARGET_DIR=$SLURM_SUBMIT_DIR #/job_$SLURM_JOB_ID
+#TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
 
@@ -36,7 +39,7 @@ CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP_CN.pth"
 
 
 FILENAME=$(date "+%Y%m%d.txt")
-FILEPATH="$TARGET_DIR/$FILENAME"
+#FILEPATH="$TARGET_DIR/$FILENAME"
 
 ## Create the directories
 mkdir -p $SCRATCH_DIR
