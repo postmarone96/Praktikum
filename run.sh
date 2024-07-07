@@ -2,7 +2,7 @@
 
 # Collect arguments
 BROKEN_DS=$(jq -r '.broken_ds' params.json)
-SIZE=$(jq -r 'data.size' params.json)
+SIZE=$(jq -r '.data.size' params.json)
 MODEL=$(jq -r '.model' params.json)
 IDS_FILE=$(jq -r '.ids_file' params.json)
 export BROKEN_DS
