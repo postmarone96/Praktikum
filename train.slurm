@@ -200,6 +200,4 @@ elif [ "$MODEL" = "cn" ]; then
     python -u train_cn.py --dataset_file $PREPROCESSING_OUTPUT
 fi
 
-wait 
-
 cleanup
