@@ -2,12 +2,6 @@
 
 #SBATCH -c 16
 #SBATCH -J train_job
-
-TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
-mkdir -p $TARGET_DIR
-
-#SBATCH --output=$TARGET_DIR/output.txt
-#SBATCH --error=$TARGET_DIR/error.txt
 #SBATCH -p gpu_p
 #SBATCH --gres=gpu:2
 #SBATCH --mem=160G
@@ -15,6 +9,12 @@ mkdir -p $TARGET_DIR
 #SBATCH --nice=1000
 #SBATCH --qos=gpu_normal
 ##SBATCH -w supergpu02
+
+TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
+mkdir -p $TARGET_DIR
+
+#SBATCH --output=$TARGET_DIR/output.txt
+#SBATCH --error=$TARGET_DIR/error.txt
 
 ## directory and file definition
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
