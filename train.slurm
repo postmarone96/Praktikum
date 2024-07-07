@@ -36,34 +36,34 @@ FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH="$TARGET_DIR/$FILENAME"
 
 ## Create the directories
-mkdir -p $SCRATCH_DIR/bg $SCRATCH_DIR/raw $SCRATCH_DIR/gt $TARGET_DIR
-touch $FILEPATH
+mkdir -p "$SCRATCH_DIR/bg" "$SCRATCH_DIR/raw" "$SCRATCH_DIR/gt" "$TARGET_DIR"
+touch "$FILEPATH"
 
 ## Link the Job logfiles to the logfiles in the job directory
-ln -f o_$SLURM_JOB_ID.txt $TARGET_DIR/output.txt
-ln -f e_$SLURM_JOB_ID.txt $TARGET_DIR/error.txt
+ln -f "o_$SLURM_JOB_ID.txt" "$TARGET_DIR/output.txt"
+ln -f "e_$SLURM_JOB_ID.txt" "$TARGET_DIR/error.txt"
 
 ## Save the param.json file to the target directory and scratch directory
-cp -f $P_DIR/params.json $TARGET_DIR
-cp -f $P_DIR/params.json $SCRATCH_DIR
+cp -f "$P_DIR/params.json" "$TARGET_DIR"
+cp -f "$P_DIR/params.json" "$SCRATCH_DIR"
 
 ## Copy helper functions
-cp -f $P_DIR/helper_functions.py $SCRATCH_DIR
+cp -f "$P_DIR/helper_functions.py" "$SCRATCH_DIR"
 
 ## Logging functions definition
 log_and_copy() {
     local src=$1
     local dest=$2
-    echo "$(basename "$src")" >> $FILEPATH
+    echo "$(basename "$src")" >> "$FILEPATH"
     cp "$src" "$dest"
 }
 
 periodic_backup() {
     while true; do
         sleep 4m
-        find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
+        find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
             basefile=$(basename "$file")
-            if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5" ]]; then
+            if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
             else
                 if ! grep -q "$basefile" "$FILEPATH"; then
@@ -76,9 +76,9 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
+    find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
         basefile=$(basename "$file")
-        if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5" ]]; then
+        if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
         else
             if ! grep -q "$basefile" "$FILEPATH"; then
@@ -87,11 +87,11 @@ cleanup() {
         fi
     done
     ## remove the output and error because they are already stored in the job file
-    rm o_$SLURM_JOB_ID.txt
-    rm e_$SLURM_JOB_ID.txt
+    rm "o_$SLURM_JOB_ID.txt"
+    rm "e_$SLURM_JOB_ID.txt"
 
-    kill $BACKUP_PID
-    rm -rf $SCRATCH_DIR
+    kill "$BACKUP_PID"
+    rm -rf "$SCRATCH_DIR"
     echo "Cleanup complete."
 }
 
@@ -129,7 +129,7 @@ check_remaining_time_and_cleanup() {
 check_remaining_time_and_cleanup &
 
 # Change to local scratch directory
-cd $SCRATCH_DIR
+cd "$SCRATCH_DIR"
 
 eval "$(conda shell.bash hook)"
 conda activate myenv
@@ -141,21 +141,21 @@ BACKUP_PID=$!
 # Data Preprocessing
 if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
     if [ "$SIZE" = 'xl' ]; then
-        cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
-        cp $IDS_FILE $TARGET_DIR/
-        python -u cp_xl_data.py --target_dir $SCRATCH_DIR --bg $BG_XL --raw $RAW_XL --ids $IDS_FILE
+        cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
+        cp "$IDS_FILE" "$TARGET_DIR/"
+        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE"
     elif [ "$SIZE" = 'xs' ]; then
         cp -r "$BG_XS" "$SCRATCH_DIR"
         cp -r "$RAW_XS" "$SCRATCH_DIR"
         cp -r "$GT_XS" "$SCRATCH_DIR"
     fi
 
-    cp $P_DIR/preprocessing.py $SCRATCH_DIR/
-    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT
+    cp "$P_DIR/preprocessing.py" "$SCRATCH_DIR/"
+    python -u preprocessing.py --data_path "$SCRATCH_DIR" --output_file "$PREPROCESSING_OUTPUT"
     echo "preprocessing completed"
 
 elif [[ -e "$DATASET" ]] && [[ "$BROKEN_DS" -eq 0 ]]; then
-    cp $DATASET $SCRATCH_DIR/
+    cp "$DATASET" "$SCRATCH_DIR/"
     echo "dataset.hdf5 copied successfully."
 fi
 
@@ -163,35 +163,35 @@ fi
 if [ "$MODEL" = "vae" ]; then
     echo "training vae"
     if [ -e "$AE_CHECKPOINT" ]; then
-        cp $AE_CHECKPOINT $SCRATCH_DIR/
+        cp "$AE_CHECKPOINT" "$SCRATCH_DIR/"
         echo "vae_checkpoint copied successfully."
     fi
-    cp $P_DIR/train_vae.py $SCRATCH_DIR/
-    python -u train_vae.py --dataset_file $PREPROCESSING_OUTPUT
+    cp "$P_DIR/train_vae.py" "$SCRATCH_DIR/"
+    python -u train_vae.py --dataset_file "$PREPROCESSING_OUTPUT"
 
 # Train LDM
 elif [ "$MODEL" = "ldm" ]; then
     echo "training ldm"
     if [ -e "$LDM_CHECKPOINT" ]; then
-        cp $LDM_CHECKPOINT $SCRATCH_DIR/
+        cp "$LDM_CHECKPOINT" "$SCRATCH_DIR/"
         echo "ldm_checkpoint copied successfully."
     fi 
-    cp $AE $SCRATCH_DIR/
-    cp $P_DIR/train_ldm.py $SCRATCH_DIR/
-    python -u train_ldm.py --dataset_file $PREPROCESSING_OUTPUT --job $SLURM_JOB_ID
-    cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
+    cp "$AE" "$SCRATCH_DIR/"
+    cp "$P_DIR/train_ldm.py" "$SCRATCH_DIR/"
+    python -u train_ldm.py --dataset_file "$PREPROCESSING_OUTPUT" --job "$SLURM_JOB_ID"
+    cp "$SCRATCH_DIR/samples_*.zip" "$TARGET_DIR"
 
 # Train CN
 elif [ "$MODEL" = "cn" ]; then
     echo "training cn"
     if [ -e "$CN_CHECKPOINT" ]; then
-        cp $CN_CHECKPOINT $SCRATCH_DIR/
+        cp "$CN_CHECKPOINT" "$SCRATCH_DIR/"
         echo "cn_checkpoint copied successfully."
     fi
-    cp $AE $SCRATCH_DIR/
-    cp $LDM $SCRATCH_DIR/
-    cp $P_DIR/train_cn.py $SCRATCH_DIR/
-    python -u train_cn.py --dataset_file $PREPROCESSING_OUTPUT
+    cp "$AE" "$SCRATCH_DIR/"
+    cp "$LDM" "$SCRATCH_DIR/"
+    cp "$P_DIR/train_cn.py" "$SCRATCH_DIR/"
+    python -u train_cn.py --dataset_file "$PREPROCESSING_OUTPUT"
 fi
 
 cleanup
