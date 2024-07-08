@@ -7,7 +7,7 @@ parser.add_argument('--target_dir', type=str, required=True)
 parser.add_argument('--bg', type=str, required=True)
 parser.add_argument('--raw', type=str, required=True)
 parser.add_argument('--ids', type=str, required=True)
-parser.add_argument('--num_patches', type=str, required=True)
+parser.add_argument('--num_patches', type=int, required=True)
 args = parser.parse_args()
 
 ids_file_path = args.ids
