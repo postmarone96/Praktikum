@@ -158,6 +158,7 @@ if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
         cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
         # cp "$IDS_FILE" "$TARGET_DIR/"
         python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --"$NUM_PATCH"
+        cp "$SCRATCH_DIR/ids.json" "$SLURM_SUBMIT_DIR/data/"
     elif [ "$SIZE" = 'xs' ]; then
         cp -r "$BG_XS" "$SCRATCH_DIR"
         cp -r "$RAW_XS" "$SCRATCH_DIR"
@@ -166,6 +167,7 @@ if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
 
     cp "$P_DIR/preprocessing.py" "$SCRATCH_DIR/"
     python -u preprocessing.py --data_path "$SCRATCH_DIR" --output_file "$PREPROCESSING_OUTPUT"
+    cp "$PREPROCESSING_OUTPUT" "$SLURM_SUBMIT_DIR/data/"
     echo "preprocessing completed"
 
 elif [[ -e "$DATASET" ]] && [[ "$BROKEN_DS" -eq 0 ]]; then
