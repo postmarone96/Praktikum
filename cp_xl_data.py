@@ -11,34 +11,35 @@ parser.add_argument('--ids', type=str, required=True)
 parser.add_argument('--num_patches', type=int, required=True)
 args = parser.parse_args()
 
-ids_file_path = args.ids
-
-def copy_files_from_directory(src_dir, dst_dir, ids, num_patches):
+def copy_files(src_dir, dst_dir, ids):
     if not os.path.exists(dst_dir):
         os.makedirs(dst_dir)
-    used_ids = []
-    for id in ids[:num_patches]:
-        id = id.strip()
+    for id in ids:
         src_path = os.path.join(src_dir, id)
-        if os.path.exists(src_path):  # Check if the source file exists
-            shutil.copy(src_path, dst_dir)
-            used_ids.append(id)
-    return used_ids
+        shutil.copy(src_path, dst_dir)
 
 if __name__ == "__main__":
     # Read IDs from the file
     with open(args.ids, 'r') as ids_file:
-        ids_list = ids_file.readlines()
-    
+        ids_list = [id.strip() for id in ids_file.readlines()]
+
+    # Collect all IDs that are present in both bg and raw directories
+    common_ids = []
+    for id in ids_list:
+        if os.path.exists(os.path.join(args.bg, id)) and os.path.exists(os.path.join(args.raw, id)):
+            common_ids.append(id)
+
+    # Limit to the required number of patches
+    used_ids = common_ids[:args.num_patches]
+    print(len(used_ids))
     # Define target directories
     bg_dir = os.path.join(args.target_dir, 'bg')
     raw_dir = os.path.join(args.target_dir, 'raw')
-    
-    # Copy files and get the used IDs
-    used_ids = copy_files_from_directory(args.bg, bg_dir, ids_list, args.num_patches)
-    _ = copy_files_from_directory(args.raw, raw_dir, ids_list, args.num_patches)
-    
-    # Save the used IDs to a JSON file
+
+    # Copy files for valid IDs
+    copy_files(args.bg, bg_dir, used_ids)
+    copy_files(args.raw, raw_dir, used_ids)
+
+    # Save the valid IDs to a JSON file
     with open(os.path.join(args.target_dir, 'ids.json'), 'w') as json_file:
         json.dump(used_ids, json_file, indent=4)
-
