@@ -1,6 +1,7 @@
 import os
 import shutil
 import argparse
+import json
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--target_dir', type=str, required=True)
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     
     # Copy files and get the used IDs
     used_ids = copy_files_from_directory(args.bg, bg_dir, ids_list, args.num_patches)
-    copy_files_from_directory(args.raw, raw_dir, ids_list, args.num_patches)
+    _ = copy_files_from_directory(args.raw, raw_dir, ids_list, args.num_patches)
     
     # Save the used IDs to a JSON file
     with open(os.path.join(args.target_dir, 'ids.json'), 'w') as json_file:
