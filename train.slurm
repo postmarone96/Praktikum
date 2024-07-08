@@ -156,8 +156,8 @@ echo "Starting data preprocessing..."
 if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
     if [ "$SIZE" = 'xl' ]; then
         cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
-        cp "$IDS_FILE" "$TARGET_DIR/"
-        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE"
+        # cp "$IDS_FILE" "$TARGET_DIR/"
+        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --"$NUM_PATCH"
     elif [ "$SIZE" = 'xs' ]; then
         cp -r "$BG_XS" "$SCRATCH_DIR"
         cp -r "$RAW_XS" "$SCRATCH_DIR"

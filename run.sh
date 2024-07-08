@@ -25,8 +25,10 @@ export GT_XS
 # XL
 BG_XL=$(jq -r '.data.xl.bg' params.json)
 RAW_XL=$(jq -r '.data.xl.raw' params.json)
+NUM_PATCH=$(jq -r '.data.xl.number_of_patches' params.json)
 export BG_XL
 export RAW_XL
+export NUM_PATCH
 
 # Visual Auto Encoder
 CP_VAE=$(jq -r '.jobs.vae.cp' params.json)
@@ -53,8 +55,14 @@ export JCN
 export CN_DIR
 
 test -d train_${SIZE} || mkdir train_${SIZE}
-cp -f train.slurm train_${SIZE}/
-cd train_${SIZE}
+if [ "$SIZE" = 'xs' ]; then
+    cp -f train.slurm train_${SIZE}/
+    cd train_${SIZE}
+elif [ "$SIZE" = 'xl' ]; then
+    test -d train_${SIZE}/train_${NUM_PATCH} || mkdir train_${SIZE}/train_${NUM_PATCH}
+    cp -f train.slurm train_${SIZE}/train_${NUM_PATCH}
+    cd train_${SIZE}/train_${NUM_PATCH}
+fi
 
 # Submit the SLURM job
 sbatch train.slurm
