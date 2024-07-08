@@ -41,6 +41,7 @@ FILEPATH="$TARGET_DIR/$FILENAME"
 ## Create the directories
 echo "Creating directories..."
 mkdir -p "$SCRATCH_DIR/bg" "$SCRATCH_DIR/raw" "$SCRATCH_DIR/gt" "$TARGET_DIR"
+test -d "$SLURM_SUBMIT_DIR/data" || mkdir "$SLURM_SUBMIT_DIR/data"
 touch "$FILEPATH"
 
 ## Link the Job logfiles to the logfiles in the job directory
