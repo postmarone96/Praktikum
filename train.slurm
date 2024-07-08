@@ -70,7 +70,7 @@ periodic_backup() {
     while true; do
         echo "Performing periodic backup..."
         sleep 4m
-        find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
+        find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" -o -name "*.pyc" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
             basefile=$(basename "$file")
             if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
                 cp "$file" "$TARGET_DIR/$basefile"
@@ -85,7 +85,7 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
+    find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" -o -name "*.pyc" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
         basefile=$(basename "$file")
         if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
             cp "$file" "$TARGET_DIR/$basefile"
@@ -158,7 +158,7 @@ if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
     if [ "$SIZE" = 'xl' ]; then
         cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
         # cp "$IDS_FILE" "$TARGET_DIR/"
-        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --"$NUM_PATCH"
+        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --num_patches "$NUM_PATCH"
         cp "$SCRATCH_DIR/ids.json" "$SLURM_SUBMIT_DIR/data/"
     elif [ "$SIZE" = 'xs' ]; then
         cp -r "$BG_XS" "$SCRATCH_DIR"
