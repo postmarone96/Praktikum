@@ -32,6 +32,7 @@ if __name__ == "__main__":
     # Limit to the required number of patches
     used_ids = common_ids[:args.num_patches]
     print(len(used_ids))
+    
     # Define target directories
     bg_dir = os.path.join(args.target_dir, 'bg')
     raw_dir = os.path.join(args.target_dir, 'raw')
