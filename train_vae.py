@@ -83,8 +83,8 @@ autoencoderkl = torch.nn.DataParallel(autoencoderkl)
 discriminator = torch.nn.DataParallel(discriminator)
 
 # Optimizer
-optimizer_g = Adam(autoencoderkl.parameters(), lr=vae_config['optimizer']['lr_g'])
-optimizer_d = Adam(discriminator.parameters(), lr=vae_config['optimizer']['lr_d'])
+optimizer_g = torch.optim.Adam(autoencoderkl.parameters(), lr=vae_config['optimizer']['lr_g'])
+optimizer_d = torch.optim.Adam(discriminator.parameters(), lr=vae_config['optimizer']['lr_d'])
 
 # Scheduler
 scheduler_g = ReduceLROnPlateau(optimizer_g, **vae_config['optimizer']['scheduler'])
