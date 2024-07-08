@@ -96,8 +96,8 @@ cleanup() {
         fi
     done
     ## remove the output and error because they are already stored in the job file
-    rm "$SLURM_SUBMIT_DIR/o_$SLURM_JOB_ID.txt"
-    rm "$SLURM_SUBMIT_DIR/e_$SLURM_JOB_ID.txt"
+    #rm "$SLURM_SUBMIT_DIR/o_$SLURM_JOB_ID.txt"
+    #rm "$SLURM_SUBMIT_DIR/e_$SLURM_JOB_ID.txt"
 
     kill "$BACKUP_PID"
     rm -rf "$SCRATCH_DIR"
