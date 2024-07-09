@@ -160,7 +160,7 @@ if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
         # cp "$IDS_FILE" "$TARGET_DIR/"
         python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --num_patches "$NUM_PATCH"
         cp "$SCRATCH_DIR/ids.json" "$SLURM_SUBMIT_DIR/data/"
-        ls -R "$SCRATCH_DIR"
+        # ls -R "$SCRATCH_DIR"
     elif [ "$SIZE" = 'xs' ]; then
         cp -r "$BG_XS" "$SCRATCH_DIR"
         cp -r "$RAW_XS" "$SCRATCH_DIR"

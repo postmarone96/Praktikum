@@ -93,7 +93,7 @@
             "val_interval": 2,
             "autoencoder_warm_up_n_epochs": -1,
             "num_example_images": 4,
-            "num_epochs_checkpoint": 10
+            "num_epochs_checkpoints": 10
         }
   },
   
@@ -124,7 +124,7 @@
     "training": {
       "n_epochs": 100,
       "val_interval": 2,
-      "num_epochs_checkpoint": 5
+      "num_epochs_checkpoints": 5
     },
     "sampling":{
     "number_of_samples": 50,
@@ -159,7 +159,7 @@
     "training": {
       "n_epochs": 100,
       "val_interval": 2,
-      "num_epochs_checkpoint": 5
+      "num_epochs_checkpoints": 5
     }
   },
 
