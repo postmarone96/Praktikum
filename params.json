@@ -93,7 +93,7 @@
             "val_interval": 2,
             "autoencoder_warm_up_n_epochs": -1,
             "num_example_images": 4,
-            "num_epochs_checkpoint": 5
+            "num_epochs_checkpoint": 10
         }
   },
   

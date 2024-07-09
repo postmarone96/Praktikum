@@ -130,6 +130,7 @@ scaler_g = torch.cuda.amp.GradScaler()
 scaler_d = torch.cuda.amp.GradScaler()
 n_epochs = vae_config['training']['n_epochs']
 val_interval = vae_config['training']['val_interval']
+num_epochs_checkpoints = vae_config['training']['num_epochs_checkpoints']
 autoencoder_warm_up_n_epochs = vae_config['training']['autoencoder_warm_up_n_epochs']
 num_example_images = vae_config['training']['num_example_images']
 
