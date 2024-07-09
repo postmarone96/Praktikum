@@ -263,8 +263,8 @@ try:
         if epoch % num_epochs_checkpoints == 0 and epoch > 0:
             save_checkpoint(
                 epoch, f'vae_checkpoint_epoch_{epoch}.pth',
-                autoencoder_state_dict=autoencoder_model.module.state_dict(),
-                discriminator_state_dict=discriminator_model.module.state_dict(),
+                autoencoder_state_dict=autoencoderkl.module.state_dict(),
+                discriminator_state_dict=discriminator.module.state_dict(),
                 optimizer_g_state_dict=optimizer_g.state_dict(),
                 optimizer_d_state_dict=optimizer_d.state_dict(),
                 scheduler_d_state_dict=scheduler_d.state_dict(),
@@ -299,8 +299,8 @@ now = datetime.now()
 date_time = now.strftime("%Y%m%d_%H%M")  
 save_checkpoint(
     epoch, f'vae_model_{date_time}.pth',
-    autoencoder_state_dict=autoencoder_model.module.state_dict(),
-    discriminator_state_dict=discriminator_model.module.state_dict(),
+    autoencoder_state_dict=autoencoderkl.module.state_dict(),
+    discriminator_state_dict=discriminator.module.state_dict(),
     optimizer_g_state_dict=optimizer_g.state_dict(),
     optimizer_d_state_dict=optimizer_d.state_dict(),
     scheduler_d_state_dict=scheduler_d.state_dict(),
