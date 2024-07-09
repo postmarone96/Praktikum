@@ -9,7 +9,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xl",
+    "size": "xs",
     "xs":{
       "bg" : "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg",
       "raw": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw",
