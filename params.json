@@ -1,7 +1,6 @@
 {
   "broken_ds": 0,
   "model": "vae",
-  "learning_rate": 6,
   "project_dir": "/home/viro/marouane.hajri/Praktikum/",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
@@ -80,8 +79,8 @@
       "kl_weight": 1e-6
     },
     "optimizer": {
-      "lr_g": 0.0001,
-      "lr_d": 0.00005,
+      "lr_g": 1e6,
+      "lr_d": 5e6,
       "scheduler": {
           "mode": "min",
           "factor": 0.5,
