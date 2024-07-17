@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xl",
+    "size": "xs",
     "xs":{
       "bg" : "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg",
       "raw": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw",
@@ -24,7 +24,7 @@
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 0,
+      "id": 21911959,
       "directory": "train_xs"
     },
 
@@ -113,7 +113,7 @@
       "beta_end": 0.0195
     },
     "optimizer": {
-      "lr": 0.0001,
+      "lr": 1e-6,
       "scheduler": {
           "mode": "min",
           "factor": 0.5,
