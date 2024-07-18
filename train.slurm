@@ -51,8 +51,8 @@ ln -f e_$SLURM_JOB_ID.txt $TARGET_DIR/error.txt
 
 ## Save the param.json file to the target directory and scratch directory
 echo "Copying param.json..."
-cp -f $P_DIR/params.json $TARGET_DIR
-cp -f $P_DIR/params.json $SCRATCH_DIR
+cp -f $P_DIR/params.json $TARGET_DIR/
+cp -f $P_DIR/params.json $SCRATCH_DIR/
 
 ## Copy helper functions
 echo "Copying helper functions..."
@@ -162,9 +162,9 @@ if [[ ! -e $DATASET ]] || [[ $BROKEN_DS -eq 1 ]]; then
         cp $SCRATCH_DIR/ids.json $SLURM_SUBMIT_DIR/data/
         # ls -R "$SCRATCH_DIR"
     elif [ $SIZE = 'xs' ]; then
-        cp -r $BG_XS $SCRATCH_DIR
-        cp -r $RAW_XS $SCRATCH_DIR
-        cp -r $GT_XS $SCRATCH_DIR
+        cp -r $BG_XS $SCRATCH_DIR/
+        cp -r $RAW_XS $SCRATCH_DIR/
+        cp -r $GT_XS $SCRATCH_DIR/
     fi
 
     cp $P_DIR/preprocessing.py $SCRATCH_DIR/
@@ -197,7 +197,7 @@ elif [ $MODEL = "ldm" ]; then
     cp $AE $SCRATCH_DIR/
     cp $P_DIR/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --dataset_file "$PREPROCESSING_OUTPUT" --job "$SLURM_JOB_ID"
-    cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
+    cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR/
 
 # Train CN
 elif [ $MODEL = "cn" ]; then
