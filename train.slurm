@@ -21,38 +21,38 @@ PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
 
-if [ "$CP_VAE" -ne 0 ]; then
-    AE_CHECKPOINT="$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP_VAE.pth"
+if [ $CP_VAE -ne 0 ]; then
+    AE_CHECKPOINT=$P_DIR/$VAE_DIR/job_$JVAE/vae_checkpoint_epoch_$CP_VAE.pth
 else
-    AE="$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth"
+    AE=$P_DIR/$VAE_DIR/job_$JVAE/vae_model_*.pth
 fi
 
-if [ "$CP_LDM" -ne 0 ]; then
-    LDM_CHECKPOINT="$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP_LDM.pth"
+if [ $CP_LDM -ne 0 ]; then
+    LDM_CHECKPOINT=$P_DIR/$LDM_DIR/job_$JLDM/ldm_checkpoint_epoch_$CP_LDM.pth
 else
-    LDM="$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth"
+    LDM=$P_DIR/$LDM_DIR/job_$JLDM/ldm_model_*.pth
 fi
 
-CN_CHECKPOINT="$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP_CN.pth"
+CN_CHECKPOINT=$P_DIR/$CN_DIR/job_$JCN/cn_checkpoint_epoch_$CP_CN.pth
 
 FILENAME=$(date "+%Y%m%d.txt")
-FILEPATH="$TARGET_DIR/$FILENAME"
+FILEPATH=$TARGET_DIR/$FILENAME
 
 ## Create the directories
 echo "Creating directories..."
-mkdir -p "$SCRATCH_DIR/bg" "$SCRATCH_DIR/raw" "$SCRATCH_DIR/gt" "$TARGET_DIR"
-test -d "$SLURM_SUBMIT_DIR/data" || mkdir "$SLURM_SUBMIT_DIR/data"
-touch "$FILEPATH"
+mkdir -p $SCRATCH_DIR/bg $SCRATCH_DIR/raw $SCRATCH_DIR/gt $TARGET_DIR
+test -d $SLURM_SUBMIT_DIR/data || mkdir $SLURM_SUBMIT_DIR/data
+touch $FILEPATH
 
 ## Link the Job logfiles to the logfiles in the job directory
 echo "Linking job logfiles..."
-ln -f "o_$SLURM_JOB_ID.txt" "$TARGET_DIR/output.txt"
-ln -f "e_$SLURM_JOB_ID.txt" "$TARGET_DIR/error.txt"
+ln -f o_$SLURM_JOB_ID.txt $TARGET_DIR/output.txt
+ln -f e_$SLURM_JOB_ID.txt $TARGET_DIR/error.txt
 
 ## Save the param.json file to the target directory and scratch directory
 echo "Copying param.json..."
-cp -f "$P_DIR/params.json" "$TARGET_DIR"
-cp -f "$P_DIR/params.json" "$SCRATCH_DIR"
+cp -f $P_DIR/params.json $TARGET_DIR
+cp -f $P_DIR/params.json $SCRATCH_DIR
 
 ## Copy helper functions
 echo "Copying helper functions..."
@@ -85,13 +85,13 @@ periodic_backup() {
 
 cleanup() {
     echo "Final backup and cleanup..."
-    find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" -o -name "*.pyc" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
-        basefile=$(basename "$file")
-        if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
-            cp "$file" "$TARGET_DIR/$basefile"
+    find $SCRATCH_DIR -type f ! \( -name "*.py" -o -name "*.nii.gz" -o -name "*.pyc" \) ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
+        basefile=$(basename $file)
+        if [[ $basefile == *.png ]] || [[ $basefile == *.hdf5 ]]; then
+            cp $file $TARGET_DIR/$basefile
         else
-            if ! grep -q "$basefile" "$FILEPATH"; then
-                log_and_copy "$file" "$TARGET_DIR"
+            if ! grep -q $basefile $FILEPATH; then
+                log_and_copy $file $TARGET_DIR
             fi
         fi
     done
@@ -99,8 +99,8 @@ cleanup() {
     #rm "$SLURM_SUBMIT_DIR/o_$SLURM_JOB_ID.txt"
     #rm "$SLURM_SUBMIT_DIR/e_$SLURM_JOB_ID.txt"
 
-    kill "$BACKUP_PID"
-    rm -rf "$SCRATCH_DIR"
+    kill $BACKUP_PID
+    rm -rf $SCRATCH_DIR
     echo "Cleanup complete."
 }
 
@@ -142,7 +142,7 @@ check_remaining_time_and_cleanup &
 
 # Change to local scratch directory
 echo "Changing to scratch directory..."
-cd "$SCRATCH_DIR"
+cd $SCRATCH_DIR
 
 eval "$(conda shell.bash hook)"
 conda activate myenv
@@ -154,61 +154,61 @@ BACKUP_PID=$!
 
 # Data Preprocessing
 echo "Starting data preprocessing..."
-if [[ ! -e "$DATASET" ]] || [[ "$BROKEN_DS" -eq 1 ]]; then
-    if [ "$SIZE" = 'xl' ]; then
-        cp "$P_DIR/cp_xl_data.py" "$SCRATCH_DIR/"
+if [[ ! -e $DATASET ]] || [[ $BROKEN_DS -eq 1 ]]; then
+    if [ $SIZE = 'xl' ]; then
+        cp $P_DIR/cp_xl_data.py $SCRATCH_DIR/
         # cp "$IDS_FILE" "$TARGET_DIR/"
-        python -u cp_xl_data.py --target_dir "$SCRATCH_DIR" --bg "$BG_XL" --raw "$RAW_XL" --ids "$IDS_FILE" --num_patches "$NUM_PATCH"
-        cp "$SCRATCH_DIR/ids.json" "$SLURM_SUBMIT_DIR/data/"
+        python -u cp_xl_data.py --target_dir $SCRATCH_DIR --bg $BG_XL --raw $RAW_XL --ids $IDS_FILE --num_patches $NUM_PATCH
+        cp $SCRATCH_DIR/ids.json $SLURM_SUBMIT_DIR/data/
         # ls -R "$SCRATCH_DIR"
-    elif [ "$SIZE" = 'xs' ]; then
-        cp -r "$BG_XS" "$SCRATCH_DIR"
-        cp -r "$RAW_XS" "$SCRATCH_DIR"
-        cp -r "$GT_XS" "$SCRATCH_DIR"
+    elif [ $SIZE = 'xs' ]; then
+        cp -r $BG_XS $SCRATCH_DIR
+        cp -r $RAW_XS $SCRATCH_DIR
+        cp -r $GT_XS $SCRATCH_DIR
     fi
 
-    cp "$P_DIR/preprocessing.py" "$SCRATCH_DIR/"
-    python -u preprocessing.py --data_path "$SCRATCH_DIR" --output_file "$PREPROCESSING_OUTPUT"
-    cp "$PREPROCESSING_OUTPUT" "$SLURM_SUBMIT_DIR/data/"
+    cp $P_DIR/preprocessing.py $SCRATCH_DIR/
+    python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $PREPROCESSING_OUTPUT
+    cp $PREPROCESSING_OUTPUT $SLURM_SUBMIT_DIR/data/
     echo "preprocessing completed"
 
-elif [[ -e "$DATASET" ]] && [[ "$BROKEN_DS" -eq 0 ]]; then
-    cp "$DATASET" "$SCRATCH_DIR/"
+elif [[ -e $DATASET ]] && [[ $BROKEN_DS -eq 0 ]]; then
+    cp $DATASET $SCRATCH_DIR/
     echo "dataset.hdf5 copied successfully."
 fi
 
 # Train VAE
-if [ "$MODEL" = "vae" ]; then
+if [ $MODEL = "vae" ]; then
     echo "training vae"
-    if [ -e "$AE_CHECKPOINT" ]; then
-        cp "$AE_CHECKPOINT" "$SCRATCH_DIR/"
+    if [ -e $AE_CHECKPOINT ]; then
+        cp $AE_CHECKPOINT $SCRATCH_DIR/
         echo "vae_checkpoint copied successfully."
     fi
-    cp "$P_DIR/train_vae.py" "$SCRATCH_DIR/"
+    cp $P_DIR/train_vae.py $SCRATCH_DIR/
     python -u train_vae.py --dataset_file "$PREPROCESSING_OUTPUT"
 
 # Train LDM
-elif [ "$MODEL" = "ldm" ]; then
+elif [ $MODEL = "ldm" ]; then
     echo "training ldm"
-    if [ -e "$LDM_CHECKPOINT" ]; then
-        cp "$LDM_CHECKPOINT" "$SCRATCH_DIR/"
+    if [ -e $LDM_CHECKPOINT ]; then
+        cp $LDM_CHECKPOINT $SCRATCH_DIR/
         echo "ldm_checkpoint copied successfully."
     fi 
-    cp "$AE" "$SCRATCH_DIR/"
-    cp "$P_DIR/train_ldm.py" "$SCRATCH_DIR/"
+    cp $AE $SCRATCH_DIR/
+    cp $P_DIR/train_ldm.py $SCRATCH_DIR/
     python -u train_ldm.py --dataset_file "$PREPROCESSING_OUTPUT" --job "$SLURM_JOB_ID"
-    cp "$SCRATCH_DIR/samples_*.zip" "$TARGET_DIR"
+    cp $SCRATCH_DIR/samples_*.zip $TARGET_DIR
 
 # Train CN
-elif [ "$MODEL" = "cn" ]; then
+elif [ $MODEL = "cn" ]; then
     echo "training cn"
-    if [ -e "$CN_CHECKPOINT" ]; then
-        cp "$CN_CHECKPOINT" "$SCRATCH_DIR/"
+    if [ -e $CN_CHECKPOINT ]; then
+        cp $CN_CHECKPOINT $SCRATCH_DIR/
         echo "cn_checkpoint copied successfully."
     fi
-    cp "$AE" "$SCRATCH_DIR/"
-    cp "$LDM" "$SCRATCH_DIR/"
-    cp "$P_DIR/train_cn.py" "$SCRATCH_DIR/"
+    cp $AE $SCRATCH_DIR/
+    cp $LDM $SCRATCH_DIR/
+    cp $P_DIR/train_cn.py $SCRATCH_DIR/
     python -u train_cn.py --dataset_file "$PREPROCESSING_OUTPUT"
 fi
 
