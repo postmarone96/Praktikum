@@ -132,7 +132,7 @@ inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
 # Other parameters
 n_epochs = ldm_config['training']['n_epochs']
 val_interval = ldm_config['training']['val_interval']
-num_epochs_checkpoints = ldm_config['training']['num_epochs_checkpoint']
+num_epochs_checkpoints = ldm_config['training']['num_epochs_checkpoints']
 
 # Start training
 try:
