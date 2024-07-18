@@ -78,7 +78,7 @@ def load_model(config, model_class, file_prefix, model_prefix, device):
     model = model_class(**config).to(device)
     file = glob.glob(f'{file_prefix}_model*.pth') + glob.glob(f'{file_prefix}_checkpoint*.pth')
     model_state = torch.load(file[0])
-    if list(unet_model[f'{model_prefix}_state_dict'].keys())[0].startswith('module.'):
+    if list(model_state[f'{model_prefix}_state_dict'].keys())[0].startswith('module.'):
         new_state_dict = {k[len("module."):]: v for k, v in model_state[f'{model_prefix}_state_dict'].items()}
         model.load_state_dict(new_state_dict)
     else:
