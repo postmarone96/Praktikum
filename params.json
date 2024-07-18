@@ -1,8 +1,8 @@
 {
   "broken_ds": 0,
   "model": "ldm",
-  "project_dir": "~/Praktikum",
-  "ids_file": "~/Praktikum/ids.txt",
+  "project_dir": "/home/viro/marouane.hajri/Praktikum",
+  "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
   "data":{
     "dim": 320,
