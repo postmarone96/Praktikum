@@ -100,8 +100,9 @@ scaler = GradScaler()
 scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
 
 # Upload Parameters from Checkpoint
+checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
+
 if checkpoint_path:
-    checkpoint_path = glob.glob('ldm_checkpoint_epoch_*.pth')
     checkpoint = torch.load(checkpoint_path[0])
     start_epoch = checkpoint['epoch'] + 1
     scaler.load_state_dict(checkpoint['scaler_state_dict'])
