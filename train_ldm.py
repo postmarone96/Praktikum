@@ -265,11 +265,11 @@ for i in range(number_of_samples):
     # Decode latent representation of the intermediary images
     with torch.no_grad():
         # Concatenating the images for each channel (first two channels in this case) and then all channels together
-        concat_channels = [torch.cat([img[:, j, :, :].unsqueeze(1) for img in intermediates], dim=-1) for j in range(len(config['input_channels']))]
+        concat_channels = [torch.cat([img[:, j, :, :].unsqueeze(1) for img in intermediates], dim=-1) for j in range(len(config['dataset']['input_channels']))]
         concat_all_channels = torch.cat(concat_channels, dim=-2)
     
     # Plotting
-    fig, ax = plt.subplots(figsize=(12, len(config['input_channels'])))
+    fig, ax = plt.subplots(figsize=(12, len(config['dataset']['input_channels'])))
     im = ax.imshow(concat_all_channels[0, 0].cpu(), cmap="jet", vmin=0, vmax=1)
     # Remove the axis
     ax.axis('off')
@@ -277,9 +277,9 @@ for i in range(number_of_samples):
     # Add the colorbar
     cbar = plt.colorbar(im, ax=ax, fraction=0.015, pad=0.04)
     cbar.set_label('Intensity', rotation=270, labelpad=15,  verticalalignment='center')
-    channel_height = concat_all_channels.size(2) // len(config['input_channels'])
-    channel_labels = config['input_channels']
-    for j in range(len(config['input_channels'])):
+    channel_height = concat_all_channels.size(2) // len(config['dataset']['input_channels'])
+    channel_labels = config['dataset']['input_channels']
+    for j in range(len(channel_labels)):
         ax.text(-150, channel_height * (0.5 + j), channel_labels[j], fontsize=12, va='center', ha='center')
 
     plt.savefig(os.path.join(pkl_dir, f'sample_{i}.png'), dpi=300)
