@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xl",
+    "size": "xs",
     "xs":{
       "bg" : "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/bg",
       "raw": "/lustre/groups/iterm/Annotated_Datasets/Annotated Datasets/UCHL1 HFD - Peripheral Nervous System instance/raw",
@@ -24,13 +24,13 @@
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 22326224,
-      "directory": "train_xl/train_250"
+      "id": 21911959,
+      "directory": "train_xs"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 0,
+      "id": 22325509,
       "directory": "train_xs"
     },
 
@@ -48,7 +48,7 @@
     "num_workers": 16,
     "persistent_workers": true,
     "input_channels": ["raw"],
-    "condition":""
+    "condition":["bg", "gt"]
   },
 
   "VAE":{
@@ -148,7 +148,7 @@
       "num_train_timesteps": 1000
     },
     "optimizer": {
-      "lr": 0.0001,
+      "lr": 1e-6,
       "scheduler": {
         "mode": "min",
         "factor": 0.5,
@@ -156,7 +156,7 @@
       }
     },
     "training": {
-      "n_epochs": 100,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }
