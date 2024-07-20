@@ -24,8 +24,8 @@
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 22326124,
-      "directory": "train_xl/train_150"
+      "id": 22326176,
+      "directory": "train_xl/train_200"
     },
 
     "ldm": {
