@@ -49,7 +49,7 @@ with open('params.json') as json_file:
 
 vae_config = config['VAE']
 ldm_config = config['LDM']
-cn_config = = config['CN']
+cn_config = config['CN']
 
 # Prepare Dataset
 train_dataset, validation_dataset = setup_datasets( args.dataset_file, 
