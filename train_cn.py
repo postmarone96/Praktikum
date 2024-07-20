@@ -143,7 +143,7 @@ inferer = DiffusionInferer(scheduler)
 # Training loop
 n_epochs = cn_config['training']['n_epochs']
 val_interval = cn_config['training']['val_interval']
-num_epochs_checkpoints = cn_config['training']['num_epochs_checkpoint']
+num_epochs_checkpoints = cn_config['training']['num_epochs_checkpoints']
 
 # Start training
 try:
