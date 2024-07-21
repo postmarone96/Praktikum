@@ -10,9 +10,9 @@
     "gt_th": 0.5,
     "size": "xs",
     "xs":{
-      "bg" : "/home/viro/marouane.hajri/Praktikum/train_xl/data/test/bg",
-      "raw": "/home/viro/marouane.hajri/Praktikum/train_xl/data/test/raw",
-      "gt": "/home/viro/marouane.hajri/Praktikum/train_xl/data/test/gt"
+      "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
+      "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
+      "gt": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/gt"
     },
     "xl":{
       "bg": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/",
