@@ -24,14 +24,14 @@
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 21911959,
-      "directory": "train_xs"
+      "id": 21911969,
+      "directory": "train_xl/train_50"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 22342690,
-      "directory": "train_xl/train_50"
+      "id": 22325509,
+      "directory": "train_xs"
     },
 
     "cn": {
