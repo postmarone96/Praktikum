@@ -17,21 +17,21 @@
     "xl":{
       "bg": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/",
       "raw": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/",
-      "number_of_patches": 250
+      "number_of_patches": 290
     }
   },
 
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 22326224,
-      "directory": "train_xl/train_250/"
+      "id": 22326424,
+      "directory": "train_xl/train_290/"
     },
 
     "ldm": {
-      "cp": 0,
-      "id": 22565819,
-      "directory": "train_xl/train_250/"
+      "cp": 65,
+      "id": 22566167,
+      "directory": "train_xl/train_290/"
     },
 
     "cn": {
