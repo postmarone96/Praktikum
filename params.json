@@ -1,6 +1,6 @@
 {
   "broken_ds": 0,
-  "model": "ldm",
+  "model": "cn",
   "project_dir": "/home/viro/marouane.hajri/Praktikum",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xl",
+    "size": "xs",
     "xs":{
       "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
       "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
@@ -24,14 +24,14 @@
   "jobs": {
     "vae": {
       "cp": 0,
-      "id": 22326224,
-      "directory": "train_xl/train_250/"
+      "id": 21911959,
+      "directory": "train_xs/"
     },
 
     "ldm": {
-      "cp": 75,
-      "id": 22565819,
-      "directory": "train_xl/train_250/"
+      "cp": 0,
+      "id": 22565624,
+      "directory": "train_xl/train_150/"
     },
 
     "cn": {
