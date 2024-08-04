@@ -21,17 +21,21 @@ class NiftiPreprocessor:
 
     def load_and_preprocess_nifti(self, path, threshold=None):
         img = nib.load(path).get_fdata()
-        img = np.moveaxis(img, -1, 0) # Reorder to z, x, y
-        if threshold is not None: # Applying threshold for ground truth images
-            img = np.array([(slice > threshold).astype(np.float32) for slice in img])
-        else: # Normalize non-GT images
+        img = np.moveaxis(img, -1, 0)  # Reorder to z, x, y
+        if threshold is not None:  # Applying threshold for ground truth images
+            img = np.array([self.threshold_gt(slice, threshold) for slice in img])
+        else:  # Normalize non-GT images
             img = np.array([self.normalize_slice(slice) for slice in img])
         return img
-    
+
     def normalize_slice(self, slice):
         slice = np.pad(slice, pad_width=self.pad, mode='reflect')
         return slice / np.max(slice)
 
+    def threshold_gt(self, slice, threshold):
+        slice = np.pad(slice, pad_width=self.pad, mode='reflect')
+        return (slice > threshold).astype(np.float32)
+        
     def process_and_save(self):
         assert len(self.raw) == len(self.bg), "Mismatch in number of files"
         if self.size == 'xs':
