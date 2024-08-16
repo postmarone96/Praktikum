@@ -71,12 +71,12 @@ def save_checkpoint(epoch, filename, **components):
             checkpoint[key] = value
     torch.save(checkpoint, filename)
 
-def load_model(config, model_class, file_prefix, model_prefix, device):
+def load_model(config, model_class, file_prefix, model_prefix, device, path=''):
     """
     Load a model from the most recent checkpoint or model file available.
     """
     model = model_class(**config).to(device)
-    file = glob.glob(f'{file_prefix}_model*.pth') + glob.glob(f'{file_prefix}_checkpoint*.pth')
+    file = glob.glob(os.path.join(path, f'{file_prefix}_model*.pth')) + glob.glob(os.path.join(path, f'{file_prefix}_checkpoint*.pth'))
     model_state = torch.load(file[0])
     if list(model_state[f'{model_prefix}_state_dict'].keys())[0].startswith('module.'):
         new_state_dict = {k[len("module."):]: v for k, v in model_state[f'{model_prefix}_state_dict'].items()}
@@ -133,3 +133,32 @@ def cleanup(signum, frame, train_dataset, validation_dataset):
     del train_dataset
     del validation_dataset
     sys.exit(0)
+
+def subtract_mean(x: torch.Tensor) -> torch.Tensor:
+    mean = [0.406, 0.456, 0.485]
+    x[:, 0, :, :] -= mean[0]
+    x[:, 1, :, :] -= mean[1]
+    x[:, 2, :, :] -= mean[2]
+    return x
+
+def spatial_average(x: torch.Tensor, keepdim: bool = True) -> torch.Tensor:
+    return x.mean([2, 3], keepdim=keepdim)
+
+def get_features(image, radnet):
+    # If input has just 1 channel, repeat channel to have 3 channels
+    if image.shape[1]:
+        image = image.repeat(1, 3, 1, 1)
+
+    # Change order from 'RGB' to 'BGR'
+    image = image[:, [2, 1, 0], ...]
+
+    # Subtract mean used during training
+    image = subtract_mean(image)
+
+    # Get model outputs
+    with torch.no_grad():
+        feature_image = radnet(image)
+        # flattens the image spatially
+        feature_image = spatial_average(feature_image, keepdim=False)
+
+    return feature_image
