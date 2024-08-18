@@ -69,7 +69,7 @@ if metrics_config['model'] == 'vae':
             for step, batch in train_loader:
                 images = batch["image"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
-                    reconstruction, _, _ = model(images)
+                    reconstruction, _, _ = vae(images)
                     
                     # Get the features for the real data
                     real_eval_feats = get_features(images, radnet)
@@ -81,7 +81,7 @@ if metrics_config['model'] == 'vae':
                         
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
-            group = hdf.create_group('score_{index}')
+            group = f.create_group('score_{index}')
             group.attr['vae'] = row['vae']
             group.attr['ldm'] = row['ldm']
             group.attr['fid_Score'] = fid(synth_features, real_features)
@@ -102,7 +102,7 @@ elif metrics_config['model'] == 'ldm':
                                             path = config['project_dir'] + row['vae'])
 
             ldm = load_model(config=ldm_config['unet'],
-                                        model_class = DiffusionModelUNet
+                                        model_class = DiffusionModelUNet,
                                         file_prefix = 'ldm', 
                                         model_prefix = 'unet',
                                         device = device, 
@@ -147,7 +147,7 @@ elif metrics_config['model'] == 'ldm':
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
             
-            group = hdf.create_group('score_{index}')
+            group = f.create_group('score_{index}')
             group.attr['vae'] = row['vae']
             group.attr['ldm'] = row['ldm']
             group.attr['fid_Score'] = fid(synth_features, real_features)
