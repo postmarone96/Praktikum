@@ -15,7 +15,7 @@ from torch.cuda.amp import autocast
 from tqdm import tqdm
 from helper_functions import *
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet, ControlNet
-from generative.inferers import ControlNetDiffusionInferer, DiffusionInferer
+from generative.inferers import ControlNetDiffusionInferer, DiffusionInferer, LatentDiffusionInferer
 from generative.metrics import *
 from torchvision import models
 from monai.utils import set_determinism
@@ -85,8 +85,6 @@ if metrics_config['model'] == 'vae':
             group.attr['vae'] = row['vae']
             group.attr['ldm'] = row['ldm']
             group.attr['fid_Score'] = fid(synth_features, real_features)
-            del vae
-            del ldm
             del vae
     
 elif metrics_config['model'] == 'ldm':
@@ -168,14 +166,14 @@ elif metrics_config['model'] == 'cn':
                                             path = config['project_dir'] + row['vae'])
 
             ldm = load_model(config=ldm_config['unet'],
-                                        model_class = DiffusionModelUNet
+                                        model_class = DiffusionModelUNet,
                                         file_prefix = 'ldm', 
                                         model_prefix = 'unet',
                                         device = device, 
                                         path = config['project_dir'] + row['ldm'])
 
             cn = load_model(config=cn_config['cn'],
-                                        model_class = ControlNet
+                                        model_class = ControlNet,
                                         file_prefix = 'cn', 
                                         model_prefix = 'cn',
                                         device = device, 
@@ -224,7 +222,7 @@ elif metrics_config['model'] == 'cn':
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
 
-            group = hdf.create_group('score_{index}')
+            group = f.create_group('score_{index}')
             group.attr['vae'] = row['vae']
             group.attr['ldm'] = row['ldm']
             group.attr['cn'] = row['cn']
