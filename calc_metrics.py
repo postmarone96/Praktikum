@@ -193,7 +193,7 @@ elif metrics_config['model'] == 'cn':
             real_features = []
             sample = torch.randn((config["dataset"]["batch_size"], 3, 80, 80)).to(device)
 
-            for step, batch in enumerate(val_loader):
+            for step, batch in enumerate(train_loader):
                 images = batch["image"].to(device)
                 masks = batch["cond"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
