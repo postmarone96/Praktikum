@@ -63,7 +63,7 @@ if metrics_config['model'] == 'vae':
                                 file_prefix = 'vae', 
                                 model_prefix = 'autoencoder',
                                 device = device, 
-                                path = config['project_dir'] + row['vae'])
+                                path = config['project_dir'] +'/'+ row['vae'])
             vae.eval()
             synth_features = []
             real_features = []
@@ -99,14 +99,14 @@ elif metrics_config['model'] == 'ldm':
                                             file_prefix = 'vae', 
                                             model_prefix = 'autoencoder',
                                             device = device, 
-                                            path = config['project_dir'] + row['vae'])
+                                            path = config['project_dir'] +'/'+ row['vae'])
 
             ldm = load_model(config=ldm_config['unet'],
                                         model_class = DiffusionModelUNet,
                                         file_prefix = 'ldm', 
                                         model_prefix = 'unet',
                                         device = device, 
-                                        path = config['project_dir'] + row['ldm'])
+                                        path = config['project_dir'] +'/'+ row['ldm'])
              
             vae = vae.half()
             scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
@@ -165,21 +165,21 @@ elif metrics_config['model'] == 'cn':
                                             file_prefix = 'vae', 
                                             model_prefix = 'autoencoder',
                                             device = device, 
-                                            path = config['project_dir'] + row['vae'])
+                                            path = config['project_dir'] +'/'+ row['vae'])
 
             ldm = load_model(config=ldm_config['unet'],
                                         model_class = DiffusionModelUNet,
                                         file_prefix = 'ldm', 
                                         model_prefix = 'unet',
                                         device = device, 
-                                        path = config['project_dir'] + row['ldm'])
+                                        path = config['project_dir'] +'/'+ row['ldm'])
 
             cn = load_model(config=cn_config['cn'],
                                         model_class = ControlNet,
                                         file_prefix = 'cn', 
                                         model_prefix = 'cn',
                                         device = device, 
-                                        path = config['project_dir'] + row['cn'])
+                                        path = config['project_dir'] +'/'+ row['cn'])
 
             # Inferer initialization
             scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
