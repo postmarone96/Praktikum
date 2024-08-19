@@ -58,13 +58,13 @@ if metrics_config['model'] == 'vae':
         file_path = 'vae_ldm.txt'
         vae_models = pd.read_csv(file_path, sep='\t')
         for index, row in vae_models.iterrows():
+            print(config['project_dir'] +'/'+ row['vae'])
             vae = load_model(config=vae_config['autoencoder'], 
                                 model_class = AutoencoderKL,
                                 file_prefix = 'vae', 
                                 model_prefix = 'autoencoder',
                                 device = device, 
                                 path = config['project_dir'] +'/'+ row['vae'])
-            print(config['project_dir'] +'/'+ row['vae'])
             vae.eval()
             synth_features = []
             real_features = []
