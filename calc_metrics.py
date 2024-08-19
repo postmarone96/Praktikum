@@ -35,7 +35,7 @@ metrics_config = config['Metrics']
 
 # Prepare Dataset
 train_dataset, _ = setup_datasets( 'test.hdf5',
-                                    config["dataset"]['input_channels'], 
+                                    input_channels=config["dataset"]['input_channels'], 
                                     condition=config["dataset"]['condition'])
 
 train_loader = DataLoader(  train_dataset, 
@@ -69,7 +69,7 @@ if metrics_config['model'] == 'vae':
             synth_features = []
             real_features = []
             
-            for step, batch in train_loader:
+            for batch in train_loader:
                 images = batch["image"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     reconstruction, _, _ = vae(images)
@@ -124,7 +124,7 @@ elif metrics_config['model'] == 'ldm':
             synth_features = []
             real_features = []
             
-            for step, batch in train_loader:
+            for batch in train_loader:
                 images = batch["image"].to(device)
                 noise = torch.randn(ldm_config['sampling']['noise_shape'])
                 noise = noise.to(device)
@@ -196,7 +196,7 @@ elif metrics_config['model'] == 'cn':
             real_features = []
             sample = torch.randn((config["dataset"]["batch_size"], 3, 80, 80)).to(device)
 
-            for step, batch in enumerate(train_loader):
+            for batch in train_loader:
                 images = batch["image"].to(device)
                 masks = batch["cond"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
