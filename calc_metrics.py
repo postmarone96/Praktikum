@@ -87,7 +87,9 @@ if metrics_config['model'] == 'vae':
             group = f.create_group('score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
-            group.attrs['fid_Score'] = fid(synth_features, real_features)
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            group.attrs['fid_Score'] = fid_score
             del vae
     
 elif metrics_config['model'] == 'ldm':
@@ -151,7 +153,9 @@ elif metrics_config['model'] == 'ldm':
             group = f.create_group('score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
-            group.attrs['fid_Score'] = fid(synth_features, real_features)
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            group.attrs['fid_Score'] = fid_score
             del vae
             del ldm
 
@@ -229,7 +233,9 @@ elif metrics_config['model'] == 'cn':
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
             group.attrs['cn'] = row['cn']
-            group.attrs['fid_Score'] = fid(synth_features, real_features)
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            group.attrs['fid_Score'] = fid_score
             del vae
             del ldm
             del cn
