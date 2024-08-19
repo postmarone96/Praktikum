@@ -84,7 +84,7 @@ if metrics_config['model'] == 'vae':
                         
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
-            group = f.create_group('score_{index}')
+            group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
             fid_score = fid(synth_features, real_features)
@@ -150,7 +150,7 @@ elif metrics_config['model'] == 'ldm':
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
             
-            group = f.create_group('score_{index}')
+            group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
             fid_score = fid(synth_features, real_features)
@@ -229,7 +229,7 @@ elif metrics_config['model'] == 'cn':
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
 
-            group = f.create_group('score_{index}')
+            group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
             group.attrs['cn'] = row['cn']
