@@ -64,6 +64,7 @@ if metrics_config['model'] == 'vae':
                                 model_prefix = 'autoencoder',
                                 device = device, 
                                 path = config['project_dir'] +'/'+ row['vae'])
+            print(config['project_dir'] +'/'+ row['vae'])
             vae.eval()
             synth_features = []
             real_features = []
