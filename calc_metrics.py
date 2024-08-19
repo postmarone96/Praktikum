@@ -47,7 +47,7 @@ device = torch.device("cuda")
 
 fid = FIDMetric()
 
-radnet = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True)
+radnet = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True)
 radnet.to(device)
 radnet.eval()
 
