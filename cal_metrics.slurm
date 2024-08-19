@@ -18,6 +18,7 @@ DATASET=$P_DIR/train_xs/data/test/test.hdf5
 VAE_LDM_TXT=$P_DIR/vae_ldm.txt
 CN_TXT=$P_DIR/cn.txt
 TARGET_DIR=$SLURM_SUBMIT_DIR/${MODEL}
+RADNET=$P_DIR/RadImageNet-ResNet50_notop.pth
 
 ## Create directories
 mkdir $TARGET_DIR
@@ -83,6 +84,7 @@ cp -f "$P_DIR/calc_metrics.py" "$SCRATCH_DIR"
 cp -f $DATASET $SCRATCH_DIR
 cp -f $VAE_LDM_TXT $SCRATCH_DIR
 cp -f $CN_TXT $SCRATCH_DIR
+cp -f $RADNET $SCRATCH_DIR
 
 cd $SCRATCH_DIR
 
