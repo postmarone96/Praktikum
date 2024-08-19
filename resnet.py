@@ -126,29 +126,7 @@ def radimagenet_resnet50(
     file_name: str = "RadImageNet-ResNet50_notop.pth",
     progress: bool = True,
 ):
-    if model_dir is None:
-        hub_dir = torch.hub.get_dir()
-        model_dir = os.path.join(hub_dir, "checkpoints")
-
-    try:
-        os.makedirs(model_dir)
-    except OSError as e:
-        if e.errno == errno.EEXIST:
-            # Directory already exists, ignore.
-            pass
-        else:
-            # Unexpected OSError, re-raise.
-            raise
-
-    filename = file_name
-    cached_file = os.path.join(model_dir, filename)
-    if not os.path.exists(cached_file):
-        gdown.download(
-            url="https://drive.google.com/uc?export=download&id=1VOWHgOq0rm7OkE_JxlWXhMAH4CvcXUHT",
-            output=cached_file,
-            quiet=not progress,
-        )
-
-    model = ResNet50()
-    model.load_state_dict(torch.load(cached_file))
+    state_dict = torch.load(file_name)
+    radnet = ResNet50()
+    radnet.load_state_dict(state_dict)
     return model
