@@ -78,7 +78,7 @@ cp -f $P_DIR/params.json $SCRATCH_DIR/
 
 ## Copy all the necessary data
 cp -f "$P_DIR/helper_functions.py" "$SCRATCH_DIR"
-cp -f "$P_DIR/calc_metrics.py" $SCRATCH_DIR
+cp -f "$P_DIR/calc_metrics.py" "$SCRATCH_DIR"
 cp -f $DATASET $SCRATCH_DIR
 cp -f $VAE_LDM_TXT $SCRATCH_DIR
 cp -f $CN_TXT $SCRATCH_DIR
