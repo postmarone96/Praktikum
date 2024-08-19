@@ -6,7 +6,7 @@ import signal
 from torch.utils.data import Dataset, Subset
 import matplotlib.pyplot as plt
 import sys
-
+import os
 class NiftiHDF5Dataset(Dataset):
     """
     Creates the datasets.
