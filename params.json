@@ -163,8 +163,7 @@
   },
 
   "Metrics":{
-    "model":"",
-    "": ""
+    "model":"vae"
   }
 }
 

@@ -53,7 +53,7 @@ radnet.eval()
 
 if metrics_config['model'] == 'vae':
     with h5py.File('vae_metrics.h5', 'w') as f:
-        file_path = 'vae_models.txt'
+        file_path = 'vae_ldm.txt'
         vae_models = pd.read_csv(file_path, sep='\t')
         for index, row in vae_models.iterrows():
             vae = load_model(config=vae_config['autoencoder'], 
@@ -89,7 +89,7 @@ if metrics_config['model'] == 'vae':
     
 elif metrics_config['model'] == 'ldm':
     with h5py.File('ldm_metrics.h5', 'w') as f:
-        file_path = 'ldm_models.txt'
+        file_path = 'vae_ldm.txt'
         ldm_models = pd.read_csv(file_path, sep='\t')
         for index, row in ldm_models.iterrows():
             vae = load_model(config=vae_config['autoencoder'], 
@@ -154,7 +154,7 @@ elif metrics_config['model'] == 'ldm':
 
 elif metrics_config['model'] == 'cn':
     with h5py.File('vae_metrics.h5', 'w') as f:
-        file_path = 'cn_models.txt'
+        file_path = 'cn.txt'
         cn_models = pd.read_csv(file_path, sep='\t')
         for index, row in cn_models.iterrows():
             

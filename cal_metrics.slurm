@@ -15,9 +15,8 @@
 ## Initiate directories
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
 DATASET = $P_DIR/test.hdf5
-VAE_TXT = $P_DIR/vae_models.txt
-LDM_TXT = $P_DIR/ldm_models.txt
-CN_TXT = $P_DIR/cn_models.txt
+VAE_LDM_TXT = $P_DIR/vae_ldm.txt
+CN_TXT = $P_DIR/cn.txt
 TARGET_DIR=$SLURM_SUBMIT_DIR/${MODEL}
 
 ## Create directories
@@ -81,8 +80,7 @@ cp -f $P_DIR/params.json $SCRATCH_DIR/
 cp -f "$P_DIR/helper_functions.py" "$SCRATCH_DIR"
 cp -f "$P_DIR/calc_metrics.py" $SCRATCH_DIR
 cp -f $DATASET $SCRATCH_DIR
-cp -f $VAE_TXT $SCRATCH_DIR
-cp -f $LDM_TXT $SCRATCH_DIR
+cp -f $VAE_LDM_TXT $SCRATCH_DIR
 cp -f $CN_TXT $SCRATCH_DIR
 
 eval "$(conda shell.bash hook)"

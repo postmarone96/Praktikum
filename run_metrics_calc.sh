@@ -7,4 +7,7 @@ export P_DIR
 
 
 test -d metrics_${MODEL} || mkdir metrics_${MODEL}
-cp -f cal_metrics.slurm metrics/
+cp -f cal_metrics.slurm metrics_${MODEL}/
+cd metrics_${MODEL}
+
+sbatch cal_metrics.slurm
