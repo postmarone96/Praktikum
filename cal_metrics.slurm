@@ -85,6 +85,7 @@ cp -f $DATASET $SCRATCH_DIR
 cp -f $VAE_LDM_TXT $SCRATCH_DIR
 cp -f $CN_TXT $SCRATCH_DIR
 cp -f $RADNET $SCRATCH_DIR
+cp -f "$P_DIR/resnet.py" "$SCRATCH_DIR"
 
 cd $SCRATCH_DIR
 

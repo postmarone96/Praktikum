@@ -20,6 +20,7 @@ from generative.metrics import *
 from torchvision import models
 from monai.utils import set_determinism
 from generative.networks.schedulers import DDPMScheduler
+from resnet import radimagenet_resnet50
 # set_determinism(5)
 
 # Parse parameters form json file
@@ -48,10 +49,7 @@ device = torch.device("cuda")
 fid = FIDMetric()
 
 # radnet = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True)
-radnet = models.resnet50(pretrained=False)
-model_path = "RadImageNet-ResNet50_notop.pth" 
-state_dict = torch.load(model_path)
-radnet.load_state_dict(state_dict)
+radnet = radimagenet_resnet50()
 radnet.to(device)
 radnet.eval()
 
