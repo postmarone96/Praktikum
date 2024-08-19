@@ -83,6 +83,8 @@ cp -f $DATASET $SCRATCH_DIR
 cp -f $VAE_LDM_TXT $SCRATCH_DIR
 cp -f $CN_TXT $SCRATCH_DIR
 
+cd $SCRATCH_DIR
+
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
