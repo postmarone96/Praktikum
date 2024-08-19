@@ -1,5 +1,5 @@
 {
-  "broken_ds": 1,
+  "broken_ds": 0,
   "model": "vae",
   "project_dir": "/home/viro/marouane.hajri/Praktikum",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
