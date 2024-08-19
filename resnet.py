@@ -129,4 +129,4 @@ def radimagenet_resnet50(
     state_dict = torch.load(file_name)
     radnet = ResNet50()
     radnet.load_state_dict(state_dict)
-    return model
+    return radnet
