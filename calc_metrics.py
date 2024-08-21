@@ -47,6 +47,9 @@ train_loader = DataLoader(  train_dataset,
 device = torch.device("cuda")
 
 fid = FIDMetric()
+mmd = MMDMetric()
+ms_ssim = MultiScaleSSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
+ssim = SSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
 
 # radnet = torch.hub.load("Warvito/radimagenet-models", model="radimagenet_resnet50", verbose=True, trust_repo=True)
 radnet = radimagenet_resnet50()
@@ -69,7 +72,10 @@ if metrics_config['model'] == 'vae':
             vae.eval()
             synth_features = []
             real_features = []
-            
+            mmd_scores = []
+            ms_ssim_recon_scores = []
+            ssim_recon_scores = []
+
             for batch in train_loader:
                 images = batch["image"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
@@ -82,15 +88,33 @@ if metrics_config['model'] == 'vae':
                     # Get the features for the synthetic data
                     synth_eval_feats = get_features(reconstruction, radnet)
                     synth_features.append(synth_eval_feats)
-                        
+
+                    # MMD scores
+                    mmd_scores.append(mmd(images, reconstruction))
+
+                    # MS_SSIM and SSIM scores
+                    ms_ssim_recon_scores.append(ms_ssim(images, reconstruction))
+                    ssim_recon_scores.append(ssim(images, reconstruction))
+
+            # fid        
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            # mmd
+            mmd_scores = torch.stack(mmd_scores)
+            # ms_ssim and ssim
+            ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
+            ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
+
+
             group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
-            fid_score = fid(synth_features, real_features)
-            fid_score = fid_score.cpu().numpy()
-            group.attrs['fid_Score'] = fid_score
+            group.attrs['fid'] = fid_score
+            group.attrs['mmd'] = [mmd_scores.mean().item(), mmd_scores.std().item()]
+            group.attrs['ms_ssim'] = [ms_ssim_recon_scores.mean().item(), ms_ssim_recon_scores.std().item()]
+            group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
             del vae
     
 elif metrics_config['model'] == 'ldm':
@@ -126,7 +150,10 @@ elif metrics_config['model'] == 'ldm':
             ldm.eval()
             synth_features = []
             real_features = []
-            
+            mmd_scores = []
+            ms_ssim_recon_scores = []
+            ssim_recon_scores = []
+
             for batch in train_loader:
                 images = batch["image"].to(device)
                 noise = torch.randn(ldm_config['sampling']['noise_shape'])
@@ -143,20 +170,33 @@ elif metrics_config['model'] == 'ldm':
                     # Get the features for the real data
                     real_eval_feats = get_features(images, radnet)
                     real_features.append(real_eval_feats)
-            
                     # Get the features for the synthetic data
                     synth_eval_feats = get_features(predictions, radnet)
                     synth_features.append(synth_eval_feats)
-                        
+                    # MMD scores
+                    mmd_scores.append(mmd(images, predictions))
+                    # MS_SSIM and SSIM scores
+                    ms_ssim_recon_scores.append(ms_ssim(images, predictions))
+                    ssim_recon_scores.append(ssim(images, predictions))
+            # fid
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
-            
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            # mmd
+            mmd_scores = torch.stack(mmd_scores)
+            # ms_ssim and ssim
+            ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
+            ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
+
+
             group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
-            fid_score = fid(synth_features, real_features)
-            fid_score = fid_score.cpu().numpy()
-            group.attrs['fid_Score'] = fid_score
+            group.attrs['fid'] = fid_score
+            group.attrs['mmd'] = [mmd_scores.mean().item(), mmd_scores.std().item()]
+            group.attrs['ms_ssim'] = [ms_ssim_recon_scores.mean().item(), ms_ssim_recon_scores.std().item()]
+            group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
             del vae
             del ldm
 
@@ -197,8 +237,12 @@ elif metrics_config['model'] == 'cn':
             controlnet_inferer = ControlNetDiffusionInferer(scheduler)
             inferer = DiffusionInferer(scheduler)
 
+            cn.eval()
             synth_features = []
             real_features = []
+            mmd_scores = []
+            ms_ssim_recon_scores = []
+            ssim_recon_scores = []
             sample = torch.randn((config["dataset"]["batch_size"], 3, 80, 80)).to(device)
 
             for batch in train_loader:
@@ -223,20 +267,34 @@ elif metrics_config['model'] == 'cn':
                     # Get the features for the real data
                     real_eval_feats = get_features(images)
                     real_features.append(real_eval_feats)
-
                     # Get the features for the synthetic data
                     synth_eval_feats = get_features(output)
                     synth_features.append(synth_eval_feats)
+                    # MMD scores
+                    mmd_scores.append(mmd(images, output))
+                    # MS_SSIM and SSIM scores
+                    ms_ssim_recon_scores.append(ms_ssim(images, output))
+                    ssim_recon_scores.append(ssim(images, output))
+            # fid    
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
+            fid_score = fid(synth_features, real_features)
+            fid_score = fid_score.cpu().numpy()
+            # mmd
+            mmd_scores = torch.stack(mmd_scores)
+            # ms_ssim and ssim
+            ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
+            ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
+
 
             group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
             group.attrs['cn'] = row['cn']
-            fid_score = fid(synth_features, real_features)
-            fid_score = fid_score.cpu().numpy()
-            group.attrs['fid_Score'] = fid_score
+            group.attrs['fid'] = fid_score
+            group.attrs['mmd'] = [mmd_scores.mean().item(), mmd_scores.std().item()]
+            group.attrs['ms_ssim'] = [ms_ssim_recon_scores.mean().item(), ms_ssim_recon_scores.std().item()]
+            group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
             del vae
             del ldm
             del cn
