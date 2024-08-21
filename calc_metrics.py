@@ -54,7 +54,7 @@ radnet.to(device)
 radnet.eval()
 
 if metrics_config['model'] == 'vae':
-    with h5py.File('vae_metrics.h5', 'w') as f:
+    with h5py.File('vae_metrics.hdf5', 'w') as f:
         file_path = 'vae_ldm.txt'
         vae_models = pd.read_csv(file_path, sep='\t')
         for index, row in vae_models.iterrows():
@@ -93,7 +93,7 @@ if metrics_config['model'] == 'vae':
             del vae
     
 elif metrics_config['model'] == 'ldm':
-    with h5py.File('ldm_metrics.h5', 'w') as f:
+    with h5py.File('ldm_metrics.hdf5', 'w') as f:
         file_path = 'vae_ldm.txt'
         ldm_models = pd.read_csv(file_path, sep='\t')
         for index, row in ldm_models.iterrows():
@@ -160,7 +160,7 @@ elif metrics_config['model'] == 'ldm':
             del ldm
 
 elif metrics_config['model'] == 'cn':
-    with h5py.File('vae_metrics.h5', 'w') as f:
+    with h5py.File('vae_metrics.hdf5', 'w') as f:
         file_path = 'cn.txt'
         cn_models = pd.read_csv(file_path, sep='\t')
         for index, row in cn_models.iterrows():

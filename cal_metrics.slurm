@@ -48,31 +48,10 @@ cleanup() {
     ## remove the output and error because they are already stored in the job file
     #rm "$SLURM_SUBMIT_DIR/o_$SLURM_JOB_ID.txt"
     #rm "$SLURM_SUBMIT_DIR/e_$SLURM_JOB_ID.txt"
-
-    kill $BACKUP_PID
     rm -rf $SCRATCH_DIR
     echo "Cleanup complete."
 }
 trap 'cleanup' SIGTERM
-periodic_backup() {
-    while true; do
-        echo "Performing periodic backup..."
-        sleep 4m
-        find "$SCRATCH_DIR" -type f ! \( -name "*.py" -o -name "*.nii.gz" -o -name "*.pyc" \) ! -path "$SCRATCH_DIR/raw/*" ! -path "$SCRATCH_DIR/bg/*" ! -path "$SCRATCH_DIR/gt/*" ! -path "$SCRATCH_DIR/pkl_dir/*" | while read -r file; do
-            basefile=$(basename "$file")
-            if [[ "$basefile" == *.png ]] || [[ "$basefile" == *.hdf5 ]]; then
-                cp "$file" "$TARGET_DIR/$basefile"
-            else
-                if ! grep -q "$basefile" "$FILEPATH"; then
-                    log_and_copy "$file" "$TARGET_DIR"
-                fi
-            fi
-        done
-    done
-}
-echo "Starting periodic backup..."
-periodic_backup &
-BACKUP_PID=$!
 
 ## Save the param.json file to the target directory and scratch directory
 cp -f $P_DIR/params.json $TARGET_DIR/
