@@ -114,7 +114,7 @@ files = os.listdir(directory_path)
 for file_name in files:
     # Prepare Dataset
     train_dataset, _ = setup_datasets(  args.dataset_file, 
-                                    config["dataset"]['input_channels'])
+                                        config["dataset"]['input_channels'])
         ##############################################################################
         ### Think about maybe having the feeding of the dataset in the slurm file ####
         ############################################################################## 
