@@ -55,6 +55,7 @@ radnet.eval()
 
 if metrics_config['model'] == 'vae':
     with h5py.File('vae_metrics.hdf5', 'w') as f:
+        set_determinism(5)
         file_path = 'vae_ldm.txt'
         vae_models = pd.read_csv(file_path, sep='\t')
         for index, row in vae_models.iterrows():
