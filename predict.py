@@ -98,7 +98,7 @@ inferer = DiffusionInferer(scheduler)
 
 # Loop over each file in the directory
 train_dataset, _ = setup_datasets(  args.dataset_file, 
-                                    config["dataset"]['input_channels']
+                                    config["dataset"]['input_channels'],
                                     condition=config["dataset"]['condition'])
 
 train_loader = DataLoader(  train_dataset, 
