@@ -87,7 +87,7 @@ for file in "$bg_dir"/*; do
     cp -r "$gt_dir/$filename" "$scratch_gt_dir/"
 
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $DATASET
-    python -u predict.py
+    python -u predict.py --dataset_file $DATASET
 
 done
 
