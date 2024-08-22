@@ -21,6 +21,7 @@ from datetime import datetime
 import numpy as np
 import torch
 import monai
+import nibabel as nib
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
