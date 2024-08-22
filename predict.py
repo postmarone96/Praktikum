@@ -87,14 +87,6 @@ optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optim
 #Learning Rate Scheduler
 scheduler_lr = ReduceLROnPlateau(optimizer, **cn_config['optimizer']['scheduler'])
 
-# Upload Parameters from Checkpoint
-checkpoint_paths = glob.glob('cn_checkpoint_epoch_*.pth') + glob.glob('cn_model*.pth')
-if checkpoint_path:
-    checkpoint = torch.load(checkpoint_path[0])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    scheduler_lr.load_state_dict(checkpoint['scheduler_lr_state_dict'])
-    scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-
 # Inferer initialization
 check_data = next(iter(train_loader))
 with torch.no_grad():
@@ -104,68 +96,58 @@ scale_factor = 1 / torch.std(z)
 controlnet_inferer = ControlNetDiffusionInferer(scheduler)
 inferer = DiffusionInferer(scheduler)
 
-# Path to the directory containing your NIfTI files
-directory_path = '/home/marouanehajri/Downloads/bg'
-
-# List all files in the directory
-files = os.listdir(directory_path)
-
 # Loop over each file in the directory
-for file_name in files:
-    # Prepare Dataset
-    train_dataset, _ = setup_datasets(  args.dataset_file, 
-                                        config["dataset"]['input_channels'])
-        ##############################################################################
-        ### Think about maybe having the feeding of the dataset in the slurm file ####
-        ############################################################################## 
-    train_loader = DataLoader(  train_dataset, 
-                            batch_size=config["dataset"]["batch_size"], 
-                            shuffle=config["dataset"]["shuffle"], 
+train_dataset, _ = setup_datasets(  args.dataset_file, 
+                                    config["dataset"]['input_channels']
+                                    condition=config["dataset"]['condition'])
+
+train_loader = DataLoader(  train_dataset, 
+                            batch_size=1, 
+                            shuffle=False, 
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
 
-    original_nii = nib.load(os.path.join('/home/marouanehajri/Downloads/raw', file_name))
-    original_affine = original_nii.affine
-    output_file=f'predictions_340/{file_name}_dataset.hdf5'
-    
-    dataset = NiftiHDF5Dataset(output_file)
-    data_loader = DataLoader(dataset, batch_size=4, shuffle=False, num_workers=16, persistent_workers=True)
-    device = torch.device("cuda")
-    
-    total_volumes = len(dataset)
-    #volume_shape = data_loader.dataset[0]['gt'].shape  # Assuming all volumes have the same shape
-    aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.float32)
-    sample = torch.randn((4, 3, 80, 80)).to(device)
-    # Process data through the model
-    for batch_idx, val_bat in enumerate(tqdm(data_loader, desc="Processing", total=len(data_loader))):
-        with torch.no_grad(), amp.autocast(enabled=True):
-            z = autoencoderkl.encode_stage_2_inputs(val_bat['gt'][:, 0:1, :, :].to(device))
-            scale_factor = 1 / torch.std(z)
-            m = val_bat['gt'].to(device)
-    
-            # Assuming you have a scheduler for timesteps
-            for t in scheduler.timesteps:
-                down_block_res_samples, mid_block_res_sample = controlnet(
-                    x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=m
-                )
-                noise_pred = unet(
-                    sample,
-                    timesteps=torch.Tensor([t]).to(device),
-                    down_block_additional_residuals=down_block_res_samples,
-                    mid_block_additional_residual=mid_block_res_sample,
-                )
-                sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
-    
-            output = autoencoderkl.decode(sample) / scale_factor
-            output_numpy = output.squeeze(1).cpu().numpy()
-            aggregated_output.append(output_numpy)
-            
-    # Concatenate all slices into a single array
-    aggregated_output = np.concatenate(aggregated_output, axis=0)
-    #padded_output = np.pad(aggregated_output, ((22, 22), (22, 22), (0, 0)), 'constant', constant_values=0)
-    #cropped_output = aggregated_output[:, 10:-10, 10:-10]
-    padded_output = aggregated_output.astype(np.float32)
-    new_nifti = nib.Nifti1Image(padded_output, affine=original_affine)
-    nib.save(new_nifti, f'predictions_340/{file_name}')
-    del dataset
+raw_dir = os.path.join(os.getcwd(), 'raw')
+nii_files = [f for f in os.listdir(raw_dir) if f.endswith('.nii')]
+nii_file_path = os.path.join(raw_dir, nii_files[0])
+original_nii = nib.load(nii_file_path)
+original_affine = original_nii.affine
 
+total_volumes = len(train_dataset)
+#volume_shape = data_loader.dataset[0]['gt'].shape  # Assuming all volumes have the same shape
+aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.float32)
+sample = torch.randn((1, 3, 80, 80)).to(device)
+# Process data through the model
+for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
+    with torch.no_grad(), amp.autocast(enabled=True):
+        z = autoencoderkl.encode_stage_2_inputs(batch['cond'].to(device))
+        scale_factor = 1 / torch.std(z)
+        m = batch['cond'].to(device)
+
+        # Assuming you have a scheduler for timesteps
+        for t in scheduler.timesteps:
+            down_block_res_samples, mid_block_res_sample = controlnet(
+                x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=m
+            )
+            noise_pred = unet(
+                sample,
+                timesteps=torch.Tensor([t]).to(device),
+                down_block_additional_residuals=down_block_res_samples,
+                mid_block_additional_residual=mid_block_res_sample,
+            )
+            sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
+
+        output = autoencoderkl.decode(sample) / scale_factor
+        output_numpy = output.squeeze(1).cpu().numpy()
+        output_numpy = output_numpy[padding:-padding, padding:-padding]
+        aggregated_output.append(output_numpy)
+        
+# Concatenate all slices into a single array
+reconstructed_volume = np.stack(aggregated_output, axis=0)
+reconstructed_volume = np.moveaxis(reconstructed_volume, 0, -1)
+reconstructed_nii = nib.Nifti1Image(reconstructed_volume, original_nii.affine, original_nii.header)
+nib.save(reconstructed_nii, f'synth_{os.path.basename(nii_file_path)}')
+del dataset
+del unet
+del autoencoderkl
+del cn
