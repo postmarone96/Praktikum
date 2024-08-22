@@ -87,15 +87,6 @@ optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optim
 #Learning Rate Scheduler
 scheduler_lr = ReduceLROnPlateau(optimizer, **cn_config['optimizer']['scheduler'])
 
-# Inferer initialization
-check_data = next(iter(train_loader))
-with torch.no_grad():
-    with autocast(enabled=True):
-        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
-scale_factor = 1 / torch.std(z)
-controlnet_inferer = ControlNetDiffusionInferer(scheduler)
-inferer = DiffusionInferer(scheduler)
-
 # Loop over each file in the directory
 train_dataset, _ = setup_datasets(  args.dataset_file, 
                                     config["dataset"]['input_channels'],
@@ -106,6 +97,15 @@ train_loader = DataLoader(  train_dataset,
                             shuffle=False, 
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
+
+# Inferer initialization
+check_data = next(iter(train_loader))
+with torch.no_grad():
+    with autocast(enabled=True):
+        z = autoencoderkl.encode_stage_2_inputs(check_data['image'].to(device))
+scale_factor = 1 / torch.std(z)
+controlnet_inferer = ControlNetDiffusionInferer(scheduler)
+inferer = DiffusionInferer(scheduler)
 
 raw_dir = os.path.join(os.getcwd(), 'raw')
 nii_files = [f for f in os.listdir(raw_dir) if f.endswith('.nii')]

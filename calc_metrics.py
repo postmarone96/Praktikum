@@ -200,7 +200,7 @@ elif metrics_config['model'] == 'ldm':
             del ldm
 
 elif metrics_config['model'] == 'cn':
-    with h5py.File('vae_metrics.hdf5', 'w') as f:
+    with h5py.File('cn_metrics.hdf5', 'w') as f:
         file_path = 'cn.txt'
         cn_models = pd.read_csv(file_path, sep='\t')
         for index, row in cn_models.iterrows():
