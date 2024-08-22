@@ -60,7 +60,7 @@ if metrics_config['model'] == 'vae':
     with h5py.File('vae_metrics.hdf5', 'w') as f:
         set_determinism(5)
         file_path = 'vae_ldm.txt'
-        vae_models = pd.read_csv(file_path, sep='\t')
+        vae_models = pd.read_csv(file_path, sep=',')
         for index, row in vae_models.iterrows():
             print(config['project_dir'] +'/'+ row['vae'])
             vae = load_model(config=vae_config['autoencoder'], 
@@ -120,7 +120,7 @@ if metrics_config['model'] == 'vae':
 elif metrics_config['model'] == 'ldm':
     with h5py.File('ldm_metrics.hdf5', 'w') as f:
         file_path = 'vae_ldm.txt'
-        ldm_models = pd.read_csv(file_path, sep='\t')
+        ldm_models = pd.read_csv(file_path, sep=',')
         for index, row in ldm_models.iterrows():
             vae = load_model(config=vae_config['autoencoder'], 
                                             model_class = AutoencoderKL,
