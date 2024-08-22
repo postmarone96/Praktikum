@@ -88,7 +88,9 @@ for file in "$bg_dir"/*; do
     find "$SCRATCH_DIR"
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $DATASET
     python -u predict.py --dataset_file $DATASET
-
+    rm -rf $scratch_raw_dir/$filename
+    rm -rf $scratch_bg_dir/$filename
+    rm -rf $scratch_gt_dir/$filename
 done
 
 cleanup
