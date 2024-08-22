@@ -121,7 +121,7 @@ sample = torch.randn((1, 3, 80, 80)).to(device)
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
-        z = autoencoderkl.encode_stage_2_inputs(batch['cond'].to(device))
+        z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         scale_factor = 1 / torch.std(z)
         m = batch['cond'].to(device)
 
