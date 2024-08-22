@@ -45,7 +45,7 @@ with open('params.json') as json_file:
 
 vae_config = config['VAE']
 ldm_config = config['LDM']
-cn_config = = config['CN']
+cn_config = config['CN']
 
 # set device
 device = torch.device("cuda")
