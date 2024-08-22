@@ -136,7 +136,6 @@ elif metrics_config['model'] == 'ldm':
                                         device = device, 
                                         path = config['project_dir'] +'/'+ row['ldm'])
              
-            vae = vae.half()
             scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
             check_data = next(iter(train_loader))
 
