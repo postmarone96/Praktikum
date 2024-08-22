@@ -140,7 +140,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
 
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
-        output_numpy = output_numpy[padding:-padding, padding:-padding]
+        output_numpy = output_numpy[10:-10, 10:-10]
         aggregated_output.append(output_numpy)
         
 # Concatenate all slices into a single array
