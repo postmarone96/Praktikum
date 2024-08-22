@@ -68,7 +68,7 @@ unet = load_model(  config = ldm_config['unet'],
 controlnet = load_model(config = cn_config['cn'],
                         model_class = ControlNet, 
                         file_prefix = 'cn', 
-                        model_prefix = 'controlnet',
+                        model_prefix = 'cn',
                         device = device)
 
 # DDPM Scheduler
