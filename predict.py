@@ -107,7 +107,7 @@ scale_factor = 1 / torch.std(z)
 controlnet_inferer = ControlNetDiffusionInferer(scheduler)
 inferer = DiffusionInferer(scheduler)
 
-raw_dir = os.path.join(os.getcwd(), 'raw')
+raw_dir = 'raw'#os.path.join(os.getcwd(), 'raw')
 nii_files = [f for f in os.listdir(raw_dir) if f.endswith('.nii')]
 nii_file_path = os.path.join(raw_dir, nii_files[0])
 original_nii = nib.load(nii_file_path)
