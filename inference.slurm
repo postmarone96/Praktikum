@@ -89,13 +89,6 @@ for file in "$bg_dir"/*; do
     python -u preprocessing.py --data_path $SCRATCH_DIR --output_file $DATASET
     python -u predict.py
 
-
-
 done
 
-
-
-
-
-python -u calc_metrics.py
 cleanup

@@ -54,15 +54,8 @@ export CP_CN
 export JCN
 export CN_DIR
 
-test -d train_${SIZE} || mkdir train_${SIZE}
-if [ "$SIZE" = 'xs' ]; then
-    cp -f train.slurm train_${SIZE}/
-    cd train_${SIZE}
-elif [ "$SIZE" = 'xl' ]; then
-    test -d train_${SIZE}/train_${NUM_PATCH} || mkdir train_${SIZE}/train_${NUM_PATCH}
-    cp -f train.slurm train_${SIZE}/train_${NUM_PATCH}
-    cd train_${SIZE}/train_${NUM_PATCH}
-fi
+test -d predictions || mkdir predictions
+cp inference.slurm predictions/
+cd predictions
 
-# Submit the SLURM job
-sbatch train.slurm
+sbatch inference.slurm

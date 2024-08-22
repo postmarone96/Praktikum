@@ -264,10 +264,10 @@ elif metrics_config['model'] == 'cn':
                     output = vae.decode(sample) / scale_factor
                     
                     # Get the features for the real data
-                    real_eval_feats = get_features(images)
+                    real_eval_feats = get_features(images, radnet)
                     real_features.append(real_eval_feats)
                     # Get the features for the synthetic data
-                    synth_eval_feats = get_features(output)
+                    synth_eval_feats = get_features(output, radnet)
                     synth_features.append(synth_eval_feats)
                     # MMD scores
                     mmd_scores.append(mmd(images, output))
