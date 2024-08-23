@@ -123,6 +123,7 @@ total_slices = original_nii.shape[-1]
 #volume_shape = data_loader.dataset[0]['gt'].shape  # Assuming all volumes have the same shape
 aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.float32)
 sample = torch.randn((batch_size, 3, 80, 80)).to(device)
+slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
