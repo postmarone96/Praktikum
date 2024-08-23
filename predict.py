@@ -156,7 +156,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
         if end_slice_idx > total_slices:
             end_slice_idx = total_slices
         print(f"Target shape in reconstructed_volume[:, :, {start_slice_idx}:{end_slice_idx}]: {reconstructed_volume[:, :, start_slice_idx:end_slice_idx].shape}")
-        reconstructed_volume[:, :, start_slice_idx:end_slice_idx] = output_numpy
+        reconstructed_volume[start_slice_idx:end_slice_idx, :, :] = output_numpy
 
         # Update the slice index for the next batch
         slice_idx += batch_size
