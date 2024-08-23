@@ -169,4 +169,4 @@ del train_dataset
 del train_loader
 del unet
 del autoencoderkl
-del cn
+del controlnet
