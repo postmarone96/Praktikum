@@ -82,6 +82,9 @@ scaler = GradScaler()
 for p in unet.parameters():
     p.requires_grad = False
 
+# batch size
+batch_size = 30
+
 # Optimizer
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optimizer']['lr'])
 
@@ -94,7 +97,7 @@ train_dataset, _ = setup_datasets(  args.dataset_file,
                                     condition=config["dataset"]['condition'])
 
 train_loader = DataLoader(  train_dataset, 
-                            batch_size=1, 
+                            batch_size=batch_size, 
                             shuffle=False, 
                             num_workers=config["dataset"]["num_workers"], 
                             persistent_workers=config["dataset"]["persistent_workers"])
@@ -114,10 +117,12 @@ nii_file_path = os.path.join(raw_dir, nii_files[0])
 original_nii = nib.load(nii_file_path)
 original_affine = original_nii.affine
 
-total_volumes = len(train_dataset)
+reconstructed_volume = np.zeros((original_nii.shape), dtype=np.float32)
+total_slices = original_nii.shape[-1]
+
 #volume_shape = data_loader.dataset[0]['gt'].shape  # Assuming all volumes have the same shape
 aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.float32)
-sample = torch.randn((1, 3, 80, 80)).to(device)
+sample = torch.randn((batch_size, 3, 80, 80)).to(device)
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
@@ -140,15 +145,24 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
 
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
-        output_numpy = output_numpy[10:-10, 10:-10]
-        aggregated_output.append(output_numpy)
+        output_numpy = output_numpy[:, 10:-10, 10:-10]
+        # aggregated_output.append(output_numpy)
+        start_slice_idx = slice_idx
+        end_slice_idx = slice_idx + batch_size
+        if end_slice_idx > total_slices:
+            end_slice_idx = total_slices
+        reconstructed_volume[:, :, start_slice_idx:end_slice_idx] = output_numpy[:end_slice_idx-start_slice_idx]
         
+        # Update the slice index for the next batch
+        slice_idx += batch_size
+
 # Concatenate all slices into a single array
 reconstructed_volume = np.stack(aggregated_output, axis=0)
 reconstructed_volume = np.moveaxis(reconstructed_volume, 0, -1)
 reconstructed_nii = nib.Nifti1Image(reconstructed_volume, original_nii.affine, original_nii.header)
 nib.save(reconstructed_nii, f'synth_{os.path.basename(nii_file_path)}')
-del dataset
+del train_dataset
+del train_loader
 del unet
 del autoencoderkl
 del cn
