@@ -157,7 +157,6 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
         slice_idx += batch_size
 
 # Concatenate all slices into a single array
-reconstructed_volume = np.stack(aggregated_output, axis=0)
 reconstructed_volume = np.moveaxis(reconstructed_volume, 0, -1)
 reconstructed_nii = nib.Nifti1Image(reconstructed_volume, original_nii.affine, original_nii.header)
 nib.save(reconstructed_nii, f'synth_{os.path.basename(nii_file_path)}')
