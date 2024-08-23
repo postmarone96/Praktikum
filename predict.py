@@ -171,7 +171,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
 # Concatenate all slices into a single array
 reconstructed_volume = np.moveaxis(reconstructed_volume, 0, -1)
 reconstructed_nii = nib.Nifti1Image(reconstructed_volume, original_nii.affine, original_nii.header)
-nib.save(reconstructed_nii, f'synth_{os.path.basename(nii_file_path)}')
+nib.save(reconstructed_nii, f'F1_synth_{os.path.basename(nii_file_path)}')
 del train_dataset
 del train_loader
 del unet
