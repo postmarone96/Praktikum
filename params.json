@@ -23,7 +23,7 @@
 
   "jobs": {
     "vae": {
-      "cp": 0,
+      "cp": 10,
       "id": 24157362,
       "directory": "train_xl/train_1000/"
     },
