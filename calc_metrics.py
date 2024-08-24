@@ -188,7 +188,6 @@ elif metrics_config['model'] == 'ldm':
             ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
             ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
 
-
             group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']
             group.attrs['ldm'] = row['ldm']
@@ -202,9 +201,9 @@ elif metrics_config['model'] == 'ldm':
 elif metrics_config['model'] == 'cn':
     with h5py.File('cn_metrics.hdf5', 'w') as f:
         file_path = 'cn.txt'
-        cn_models = pd.read_csv(file_path, sep='\t')
+        cn_models = pd.read_csv(file_path, sep=',')
         for index, row in cn_models.iterrows():
-            
+            print(index)
             vae = load_model(config=vae_config['autoencoder'], 
                                             model_class = AutoencoderKL,
                                             file_prefix = 'vae', 
@@ -242,11 +241,12 @@ elif metrics_config['model'] == 'cn':
             mmd_scores = []
             ms_ssim_recon_scores = []
             ssim_recon_scores = []
-            sample = torch.randn((config["dataset"]["batch_size"], 3, 80, 80)).to(device)
+            
 
-            for batch in train_loader:
+            for batch_idx, batch in enumerate(train_loader):
                 images = batch["image"].to(device)
                 masks = batch["cond"].to(device)
+                sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     z = vae.encode_stage_2_inputs(images)
                     scale_factor = 1 / torch.std(z)
@@ -274,6 +274,8 @@ elif metrics_config['model'] == 'cn':
                     # MS_SSIM and SSIM scores
                     ms_ssim_recon_scores.append(ms_ssim(images, output))
                     ssim_recon_scores.append(ssim(images, output))
+                    if batch_idx > 5:
+                        break
             # fid    
             synth_features = torch.vstack(synth_features)
             real_features = torch.vstack(real_features)
@@ -284,7 +286,6 @@ elif metrics_config['model'] == 'cn':
             # ms_ssim and ssim
             ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
             ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
-
 
             group = f.create_group(f'score_{index}')
             group.attrs['vae'] = row['vae']

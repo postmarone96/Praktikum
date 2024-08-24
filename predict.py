@@ -124,10 +124,10 @@ original_affine = original_nii.affine
 reconstructed_volume = np.zeros((original_nii.shape), dtype=np.float32)
 total_slices = original_nii.shape[-1]
 
-
-
 noise_shape = (3, 80, 80)
 initial_noise = torch.randn(noise_shape).to(device)
+
+intermediate noise
 
 slice_idx = 0
 # Process data through the model
@@ -159,7 +159,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
                 mid_block_additional_residual=mid_block_res_sample,
             )
             sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
-
+            
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
         print(f"Decoded output_numpy shape (before cropping): {output_numpy.shape}")
