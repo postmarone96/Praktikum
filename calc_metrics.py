@@ -141,7 +141,7 @@ elif metrics_config['model'] == 'ldm':
             check_data = next(iter(train_loader))
 
             with torch.no_grad(), autocast(enabled=True):
-                z = vae.encode_stage_2_inputs(check_data['image'].to(device))
+                z = vae.encode_stage_2_inputs(check_data.to(device))
             scale_factor = 1 / torch.std(z)
 
             inferer = LatentDiffusionInferer(scheduler, scale_factor=scale_factor)
@@ -155,7 +155,7 @@ elif metrics_config['model'] == 'ldm':
             ssim_recon_scores = []
 
             for batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
-                images = batch["image"].to(device)
+                images = batch.to(device)
                 noise = torch.randn(ldm_config['sampling']['noise_shape'])
                 noise = noise.to(device)
                 with torch.no_grad():
