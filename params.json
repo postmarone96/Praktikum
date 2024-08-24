@@ -48,7 +48,7 @@
     "num_workers": 16,
     "persistent_workers": true,
     "input_channels": ["raw"],
-    "condition":["bg", "gt"]
+    "condition":""
   },
 
   "VAE":{
