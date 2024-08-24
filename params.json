@@ -48,7 +48,7 @@
     "num_workers": 16,
     "persistent_workers": true,
     "input_channels": ["raw"],
-    "condition": ""
+    "condition": ["bg", "gt"]
   },
 
   "VAE":{
@@ -163,8 +163,8 @@
   },
 
   "Metrics":{
-    "model":"ldm",
-    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/fid_dataset.hdf5"
+    "model":"cn",
+    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/test.hdf5"
   },
   
   "Inf":{

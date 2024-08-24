@@ -275,7 +275,7 @@ elif metrics_config['model'] == 'cn':
                     # MS_SSIM and SSIM scores
                     ms_ssim_recon_scores.append(ms_ssim(images, output))
                     ssim_recon_scores.append(ssim(images, output))
-                    if batch_idx > 5:
+                    if batch_idx > 1:
                         break
             # fid    
             synth_features = torch.vstack(synth_features)
