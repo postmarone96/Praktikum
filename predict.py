@@ -126,7 +126,7 @@ aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.fl
 # Fall 1:
 noise_shape = (3, 80, 80)
 single_noise = torch.randn(noise_shape).to(device)
-batch_noise = single_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
+sample = single_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
 
 # Fall 2:
 
