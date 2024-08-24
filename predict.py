@@ -51,6 +51,9 @@ with open('params.json') as json_file:
 vae_config = config['VAE']
 ldm_config = config['LDM']
 cn_config = config['CN']
+inf_config = config['Inf']
+
+inference_method = inf_config['method']
 
 # set device
 device = torch.device("cuda")
@@ -87,7 +90,10 @@ for p in unet.parameters():
     p.requires_grad = False
 
 # batch size
-batch_size = 30
+if inference_method == 3:
+    batch_size = 1
+else:
+    batch_size = 30
 
 # Optimizer
 optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optimizer']['lr'])
@@ -126,29 +132,32 @@ total_slices = original_nii.shape[-1]
 
 noise_shape = (3, 80, 80)
 initial_noise = torch.randn(noise_shape).to(device)
-
-intermediate noise
+intermediate_noise = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
 
 slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
         # Fall 1:
-        # sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
-        # Fall 2:
-        noise_list = [initial_noise]
-        for _ in range(1, batch_size):
-            new_noise = torch.randn(noise_shape).to(device)
-            averaged_noise = (noise_list[-1] + new_noise) / 2
-            noise_list.append(averaged_noise)
-        initial_noise = noise_list[-1]
-        sample = torch.stack(noise_list)
+        if inference_method == 1:
+            sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
+        elif inference_method == 2:
+            noise_list = [initial_noise]
+            for _ in range(1, batch_size):
+                new_noise = torch.randn(noise_shape).to(device)
+                averaged_noise = (noise_list[-1] + new_noise) / 2
+                noise_list.append(averaged_noise)
+            initial_noise = noise_list[-1]
+            sample = torch.stack(noise_list)
+        elif inference_method == 3:
+            sample = intermediate_noise
         z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         scale_factor = 1 / torch.std(z)
         m = batch['cond'].to(device)
 
         # Assuming you have a scheduler for timesteps
-        for t in scheduler.timesteps:
+        middle_step = len(scheduler.timesteps) // 2 
+        for t_idx, t in enumerate(scheduler.timesteps):
             down_block_res_samples, mid_block_res_sample = controlnet(
                 x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=m
             )
@@ -159,7 +168,8 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
                 mid_block_additional_residual=mid_block_res_sample,
             )
             sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
-            
+            if inference_method == 3 and t_idx == middle_step:
+                intermediate_noise = sample.clone()
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
         print(f"Decoded output_numpy shape (before cropping): {output_numpy.shape}")
