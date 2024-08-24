@@ -28,9 +28,13 @@ from torch.cuda.amp import GradScaler, autocast
 from helper_functions import *
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
+from monai.utils import set_determinism
 from generative.inferers import DiffusionInferer, ControlNetDiffusionInferer
 from generative.networks.nets import DiffusionModelUNet, ControlNet, AutoencoderKL
 from generative.networks.schedulers import DDPMScheduler
+
+# set determinism
+set_determinism(5)
 
 # clear CUDA
 torch.cuda.empty_cache()
@@ -120,20 +124,25 @@ original_affine = original_nii.affine
 reconstructed_volume = np.zeros((original_nii.shape), dtype=np.float32)
 total_slices = original_nii.shape[-1]
 
-#volume_shape = data_loader.dataset[0]['gt'].shape  # Assuming all volumes have the same shape
-aggregated_output = [] #np.empty((total_volumes, *volume_shape[1:]), dtype=np.float32)
-#  sample = torch.randn((batch_size, 3, 80, 80)).to(device)
-# Fall 1:
-noise_shape = (3, 80, 80)
-single_noise = torch.randn(noise_shape).to(device)
-sample = single_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
 
-# Fall 2:
+
+noise_shape = (3, 80, 80)
+initial_noise = torch.randn(noise_shape).to(device)
 
 slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
+        # Fall 1:
+        sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
+        # Fall 2:
+        # noise_list = [initial_noise]
+        # for _ in range(1, batch_size):
+        #    new_noise = torch.randn(noise_shape).to(device)
+        #    averaged_noise = (noise_list[-1] + new_noise) / 2
+        #    noise_list.append(averaged_noise)
+        # initial_noise = noise_list[-1]
+        # sample = torch.stack(noise_list)
         z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         scale_factor = 1 / torch.std(z)
         m = batch['cond'].to(device)
