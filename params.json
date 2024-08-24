@@ -163,7 +163,8 @@
   },
 
   "Metrics":{
-    "model":"ldm"
+    "model":"ldm",
+    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/fid_dataset.hdf5"
   },
   
   "Inf":{

@@ -13,7 +13,6 @@
 
 ## Initiate directories
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
-DATASET=$P_DIR/train_xs/data/test/test.hdf5
 VAE_LDM_TXT=$P_DIR/vae_ldm.txt
 CN_TXT=$P_DIR/cn.txt
 TARGET_DIR=$SLURM_SUBMIT_DIR/${MODEL}
