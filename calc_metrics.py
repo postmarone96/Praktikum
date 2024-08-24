@@ -62,7 +62,7 @@ if metrics_config['model'] == 'vae':
         file_path = 'vae_ldm.txt'
         vae_models = pd.read_csv(file_path, sep=',')
         for index, row in vae_models.iterrows():
-            print(config['project_dir'] +'/'+ row['vae'])
+            print(index)
             vae = load_model(config=vae_config['autoencoder'], 
                                 model_class = AutoencoderKL,
                                 file_prefix = 'vae', 
@@ -76,7 +76,7 @@ if metrics_config['model'] == 'vae':
             ms_ssim_recon_scores = []
             ssim_recon_scores = []
 
-            for batch in train_loader:
+            for batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
                 images = batch["image"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     reconstruction, _, _ = vae(images)
@@ -122,6 +122,7 @@ elif metrics_config['model'] == 'ldm':
         file_path = 'vae_ldm.txt'
         ldm_models = pd.read_csv(file_path, sep=',')
         for index, row in ldm_models.iterrows():
+            print(index)
             vae = load_model(config=vae_config['autoencoder'], 
                                             model_class = AutoencoderKL,
                                             file_prefix = 'vae', 
@@ -153,7 +154,7 @@ elif metrics_config['model'] == 'ldm':
             ms_ssim_recon_scores = []
             ssim_recon_scores = []
 
-            for batch in train_loader:
+            for batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
                 images = batch["image"].to(device)
                 noise = torch.randn(ldm_config['sampling']['noise_shape'])
                 noise = noise.to(device)
@@ -243,7 +244,7 @@ elif metrics_config['model'] == 'cn':
             ssim_recon_scores = []
             
 
-            for batch_idx, batch in enumerate(train_loader):
+            for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
                 images = batch["image"].to(device)
                 masks = batch["cond"].to(device)
                 sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
