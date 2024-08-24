@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xl",
+    "size": "xs",
     "xs":{
       "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
       "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
@@ -17,7 +17,7 @@
     "xl":{
       "bg": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/",
       "raw": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/",
-      "number_of_patches": 1000
+      "number_of_patches": 2000
     }
   },
 
@@ -43,7 +43,7 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 100,
+    "batch_size": 30,
     "shuffle": false,
     "num_workers": 16,
     "persistent_workers": true,
