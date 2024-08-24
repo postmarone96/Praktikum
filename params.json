@@ -21,10 +21,10 @@
     }
   },
 
-  "jobs": {
+"jobs": {
     "vae": {
       "cp": 0,
-      "id": 0,
+      "id": 21911959,
       "directory": "train_xs/"
     },
 
@@ -40,7 +40,7 @@
       "directory": "train_xs/"
     }
   },
-
+  
   "dataset": {
     "validation_split": 0.2,
     "batch_size": 30,
