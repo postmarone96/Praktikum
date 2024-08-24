@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xs",
+    "size": "xl",
     "xs":{
       "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
       "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
@@ -17,33 +17,33 @@
     "xl":{
       "bg": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C00/",
       "raw": "/lustre/groups/iterm/Rami/HFD/HFD_neurons/HFD_210320_UCHL1_755_HFD_DORSAL_l_1x_35o_4x8_GRB12-7-12_17-00-17/C02/",
-      "number_of_patches": 2000
+      "number_of_patches": 1000
     }
   },
 
   "jobs": {
     "vae": {
-      "cp": 0,
-      "id": 21911959,
-      "directory": "train_xs/"
+      "cp": 10,
+      "id": 24157362,
+      "directory": "train_xl/train_1000/"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 22325509,
+      "id": 0,
       "directory": "train_xs/"
     },
 
     "cn": {
       "cp": 0,
-      "id": 22565230,
+      "id": 0,
       "directory": "train_xs/"
     }
   },
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 30,
+    "batch_size": 50,
     "shuffle": false,
     "num_workers": 16,
     "persistent_workers": true,
@@ -126,7 +126,7 @@
       "num_epochs_checkpoints": 5
     },
     "sampling":{
-    "number_of_samples": 50,
+    "number_of_samples": 30,
     "num_inference_steps": 1000,
     "noise_shape": [30, 3, 80, 80],
     "intermediate_steps": 100
