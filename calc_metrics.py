@@ -76,7 +76,7 @@ if metrics_config['model'] == 'vae':
             ms_ssim_recon_scores = []
             ssim_recon_scores = []
 
-            for batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
+            for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
                 images = batch["image"].to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     reconstruction, _, _ = vae(images)
@@ -154,7 +154,7 @@ elif metrics_config['model'] == 'ldm':
             ms_ssim_recon_scores = []
             ssim_recon_scores = []
 
-            for batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
+            for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
                 images = batch.to(device)
                 noise = torch.randn(ldm_config['sampling']['noise_shape'])
                 noise = noise.to(device)
