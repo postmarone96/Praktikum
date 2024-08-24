@@ -134,15 +134,15 @@ slice_idx = 0
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
         # Fall 1:
-        sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
+        # sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
         # Fall 2:
-        # noise_list = [initial_noise]
-        # for _ in range(1, batch_size):
-        #    new_noise = torch.randn(noise_shape).to(device)
-        #    averaged_noise = (noise_list[-1] + new_noise) / 2
-        #    noise_list.append(averaged_noise)
-        # initial_noise = noise_list[-1]
-        # sample = torch.stack(noise_list)
+        noise_list = [initial_noise]
+        for _ in range(1, batch_size):
+            new_noise = torch.randn(noise_shape).to(device)
+            averaged_noise = (noise_list[-1] + new_noise) / 2
+            noise_list.append(averaged_noise)
+        initial_noise = noise_list[-1]
+        sample = torch.stack(noise_list)
         z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         scale_factor = 1 / torch.std(z)
         m = batch['cond'].to(device)
@@ -180,7 +180,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
 # Concatenate all slices into a single array
 reconstructed_volume = np.moveaxis(reconstructed_volume, 0, -1)
 reconstructed_nii = nib.Nifti1Image(reconstructed_volume, original_nii.affine, original_nii.header)
-nib.save(reconstructed_nii, f'F1_synth_{os.path.basename(nii_file_path)}')
+nib.save(reconstructed_nii, f'F2_synth_{os.path.basename(nii_file_path)}')
 del train_dataset
 del train_loader
 del unet
