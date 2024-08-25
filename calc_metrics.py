@@ -77,7 +77,7 @@ if metrics_config['model'] == 'vae':
             ssim_recon_scores = []
 
             for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
-                images = batch["image"].to(device)
+                images = batch.to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     reconstruction, _, _ = vae(images)
                     
