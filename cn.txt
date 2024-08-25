@@ -21,7 +21,6 @@ train_xl/train_100/job_21912006,train_xl/train_200/job_22565709,train_xs/job_240
 train_xl/train_100/job_21912006,train_xl/train_250/job_22857868,train_xs/job_24067288
 train_xl/train_100/job_21912006,train_xl/train_290/job_22856248,train_xs/job_24068236
 train_xl/train_150/job_22326124,train_xs/job_22325509,train_xs/job_24068237
-train_xl/train_150/job_22326124,train_xl/train_50/job_22342690,train_xs/job_24068238
 train_xl/train_150/job_22326124,train_xl/train_100/job_22326504,train_xs/job_24068240
 train_xl/train_150/job_22326124,train_xl/train_150/job_22565624,train_xs/job_24077022
 train_xl/train_150/job_22326124,train_xl/train_200/job_22565709,train_xs/job_24077023
