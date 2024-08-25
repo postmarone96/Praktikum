@@ -128,7 +128,7 @@
     "sampling":{
     "number_of_samples": 50,
     "num_inference_steps": 1000,
-    "noise_shape": [50, 3, 80, 80],
+    "noise_shape": [100, 3, 80, 80],
     "intermediate_steps": 100
     }
   },
