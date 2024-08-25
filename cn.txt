@@ -1,6 +1,2 @@
 vae,ldm,cn
-train_xl/train_290/job_22326424,train_xl/train_100/job_22326504,train_xs/job_24152864
-train_xl/train_290/job_22326424,train_xl/train_150/job_22565624,train_xs/job_24152436
-train_xl/train_290/job_22326424,train_xl/train_200/job_22565709,train_xs/job_24152435
-train_xl/train_290/job_22326424,train_xl/train_250/job_22857868,train_xs/job_24148085
-train_xl/train_290/job_22326424,train_xl/train_290/job_22856248,train_xs/job_24148084
+train_xl/train_150/job_22326124,train_xl/train_50/job_22342690,train_xs/job_24200942
