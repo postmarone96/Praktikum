@@ -58,8 +58,8 @@
       "out_channels": 1,
       "num_channels": [128, 128, 256],
       "latent_channels": 3,
-      "num_res_blocks": 3,
-      "attention_levels": [false, false, false],
+      "num_res_blocks": 2,
+      "attention_levels": [true, true, true],
       "with_encoder_nonlocal_attn": false,
       "with_decoder_nonlocal_attn": false
     },
