@@ -43,7 +43,7 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 5,
+    "batch_size": 10,
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
@@ -163,8 +163,8 @@
   },
 
   "Metrics":{
-    "model":"cn",
-    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/test.hdf5"
+    "model":"vae",
+    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/fid_dataset.hdf5"
   },
   
   "Inf":{
