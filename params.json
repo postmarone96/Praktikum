@@ -59,8 +59,8 @@
       "num_channels": [128, 128, 256],
       "latent_channels": 3,
       "num_res_blocks": 2,
-      "attention_levels": [false, true, false],
-      "with_encoder_nonlocal_attn": false,
+      "attention_levels": [false, false, false],
+      "with_encoder_nonlocal_attn": true,
       "with_decoder_nonlocal_attn": false
     },
     "discriminator": {
