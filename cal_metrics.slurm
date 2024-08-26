@@ -5,11 +5,11 @@
 #SBATCH --output=o_%j.txt
 #SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
-#SBATCH --nice=1000
-#SBATCH --qos=gpu_normal
+#SBATCH --nice=10
+#SBATCH --qos=gpu_long
 
 ## Initiate directories
 SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
