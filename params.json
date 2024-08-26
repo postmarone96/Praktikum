@@ -43,7 +43,7 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 10,
+    "batch_size": 5,
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
@@ -58,8 +58,8 @@
       "out_channels": 1,
       "num_channels": [128, 128, 256],
       "latent_channels": 3,
-      "num_res_blocks": 2,
-      "attention_levels": [true, true, true],
+      "num_res_blocks": 3,
+      "attention_levels": [false, false, false],
       "with_encoder_nonlocal_attn": false,
       "with_decoder_nonlocal_attn": false
     },
