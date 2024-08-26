@@ -228,7 +228,6 @@ elif metrics_config['model'] == 'cn':
 
             cn = torch.nn.DataParallel(cn).to(device)
             ldm = torch.nn.DataParallel(ldm).to(device)
-            
             # Inferer initialization
             scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
             check_data = next(iter(train_loader))
@@ -278,7 +277,7 @@ elif metrics_config['model'] == 'cn':
                     # MS_SSIM and SSIM scores
                     ms_ssim_recon_scores.append(ms_ssim(images, output))
                     ssim_recon_scores.append(ssim(images, output))
-                    if batch_idx > 25:
+                    if batch_idx > 5:
                         break
             # fid    
             synth_features = torch.vstack(synth_features)
