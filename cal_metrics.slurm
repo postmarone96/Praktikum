@@ -5,7 +5,7 @@
 #SBATCH --output=o_%j.txt
 #SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:1
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
