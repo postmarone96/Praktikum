@@ -43,12 +43,12 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 10,
+    "batch_size": 30,
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
     "input_channels": ["raw"],
-    "condition": ""
+    "condition": ["bg","gt"]
   },
 
   "VAE":{
@@ -107,7 +107,7 @@
       "num_head_channels": [0, 256, 512]
     },
     "ddpm_scheduler": {
-      "num_train_timesteps": 1000,
+      "num_train_timesteps": 100,
       "schedule": "linear_beta",
       "beta_start": 0.0015,
       "beta_end": 0.0195
@@ -127,7 +127,7 @@
     },
     "sampling":{
     "number_of_samples": 50,
-    "num_inference_steps": 1000,
+    "num_inference_steps": 10,
     "noise_shape": [30, 3, 80, 80],
     "intermediate_steps": 100
     }
@@ -145,7 +145,7 @@
       "conditioning_embedding_in_channels": 2
     },
     "ddpm_scheduler": {
-      "num_train_timesteps": 1000
+      "num_train_timesteps": 100
     },
     "optimizer": {
       "lr": 1e-6,
@@ -163,8 +163,8 @@
   },
 
   "Metrics":{
-    "model":"vae",
-    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/fid_dataset.hdf5"
+    "model":"cn",
+    "dataset": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/test.hdf5"
   },
   
   "Inf":{
