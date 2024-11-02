@@ -12,8 +12,10 @@
 #SBATCH --qos=gpu_normal
 ##SBATCH -w supergpu02
 
-
 P_DIR=/home/viro/marouane.hajri/Praktikum
+SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID
+
 cp $P_DIR/preprocessing_tiff.py $SCRATCH_DIR/
 cd $SCRATCH_DIR
+
 python -u preprocessing_tiff.py
