@@ -11,6 +11,7 @@ def get_tiff_file_paths(directory):
         for f in files:
             if f.lower().endswith('.tiff') or f.lower().endswith('.tif'):
                 tiff_paths.append(os.path.join(root, f))
+    print(tiff_paths)
     return sorted(tiff_paths)
 
 def map_file_paths(raw_paths, bg_paths, gt_paths):
