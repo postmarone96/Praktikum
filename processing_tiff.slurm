@@ -15,4 +15,5 @@
 
 P_DIR=/home/viro/marouane.hajri/Praktikum
 cp $P_DIR/preprocessing_tiff.py $SCRATCH_DIR/
+cd $SCRATCH_DIR
 python -u preprocessing_tiff.py
