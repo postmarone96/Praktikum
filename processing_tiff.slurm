@@ -15,6 +15,10 @@
 P_DIR=/home/viro/marouane.hajri/Praktikum
 SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID
 
+eval "$(conda shell.bash hook)"
+conda activate myenv
+echo "env activated"
+
 cp $P_DIR/preprocessing_tiff.py $SCRATCH_DIR/
 cd $SCRATCH_DIR
 
