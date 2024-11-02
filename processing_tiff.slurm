@@ -18,7 +18,7 @@ SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID
 cd $SCRATCH_DIR
 mkdir -p $SCRATCH_DIR
 
-source /home/viro/marouane.hajri/Praktikum/myvenv/bin/activate myenv
+source /home/viro/marouane.hajri/miniconda3/bin/activate myenv
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
