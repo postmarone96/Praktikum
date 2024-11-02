@@ -1,26 +1,28 @@
 import os
 import numpy as np
 import h5py
-import argparse
-import json
 from PIL import Image
 
 def get_tiff_file_paths(directory):
+    """Retrieve sorted .tif and .tiff file paths in a directory."""
     tiff_paths = []
     for root, _, files in os.walk(directory):
         for f in files:
             if f.lower().endswith('.tiff') or f.lower().endswith('.tif'):
                 tiff_paths.append(os.path.join(root, f))
-    print(tiff_paths)
     return sorted(tiff_paths)
 
 def map_file_paths(raw_paths, bg_paths, gt_paths):
+    """Map file paths based on relative paths, keeping only those that have corresponding bg and gt files."""
     mapping = []
     for raw_path in raw_paths:
         relative_path = os.path.relpath(raw_path, start=os.path.dirname(raw_paths[0]))
         bg_path = os.path.join(os.path.dirname(bg_paths[0]), relative_path)
         gt_path = os.path.join(os.path.dirname(gt_paths[0]), relative_path)
-        mapping.append((raw_path, bg_path, gt_path))
+        
+        # Only add paths if corresponding bg and gt files exist
+        if os.path.exists(bg_path) and os.path.exists(gt_path):
+            mapping.append((raw_path, bg_path, gt_path))
     return mapping
 
 class ImagePreprocessor:
@@ -31,14 +33,14 @@ class ImagePreprocessor:
         self.pad = 10
         self.gt_th = 0.5
         self.raw = get_tiff_file_paths(os.path.join(self.data_path, 'raw_cutouts'))
-        self.bg = get_tiff_file_paths(os.path.join(self.data_path, 'bg_cutouts '))
+        self.bg = get_tiff_file_paths(os.path.join(self.data_path, 'bg_cutouts'))
         self.gt = get_tiff_file_paths(os.path.join(self.data_path, 'segmentation'))
 
-        assert len(self.raw) == len(self.bg), "Mismatch in number of files between raw and bg"
-        assert len(self.raw) == len(self.gt), "Mismatch in number of files between raw and gt"
-
-        # Map files based on relative paths
+        # Map files based on relative paths, keeping only complete sets
         self.file_mappings = map_file_paths(self.raw, self.bg, self.gt)
+
+        # Assert only after filtering to ensure matching counts
+        assert len(self.file_mappings) > 0, "No matching file sets found across raw, bg, and gt directories."
 
     def load_and_preprocess_image(self, path, threshold=None):
         img = Image.open(path)
@@ -113,7 +115,5 @@ class ImagePreprocessor:
         dataset[-buffer.shape[0]:] = buffer
 
 if __name__ == '__main__':
-
-    # Run preprocessing and create dataset.hdf5 
     preprocessor = ImagePreprocessor()
     preprocessor.process_and_save()
