@@ -23,7 +23,7 @@ def map_file_paths(raw_paths, bg_paths, gt_paths):
     return mapping
 
 class ImagePreprocessor:
-    def __init__(self, args, config):
+    def __init__(self):
         self.data_path = '/lustre/groups/iterm/Rami/HFD/trigeminal_cuts_full'
         self.output_file = '/home/viro/marouane.hajri/Praktikum/metrics_cn/metrics_dataset.hdf5'
         self.dim = 320
@@ -114,5 +114,5 @@ class ImagePreprocessor:
 if __name__ == '__main__':
 
     # Run preprocessing and create dataset.hdf5 
-    preprocessor = ImagePreprocessor(args, config)
+    preprocessor = ImagePreprocessor()
     preprocessor.process_and_save()
