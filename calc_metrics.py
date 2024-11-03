@@ -206,116 +206,118 @@ elif metrics_config['model'] == 'ldm':
             del ldm
 
 elif metrics_config['model'] == 'cn':
-    with h5py.File('cn_metrics.hdf5', 'a') as f:
-        file_path = 'cn.txt'
-        cn_models = pd.read_csv(file_path, sep=',')
-        for index, row in cn_models.iterrows():
-            print(index)
-            vae = load_model(config=vae_config['autoencoder'], 
-                                model_class = AutoencoderKL,
-                                file_prefix = 'vae', 
-                                model_prefix = 'autoencoder',
-                                device = device, 
-                                path = config['project_dir'] +'/'+ row['vae'])
+    # with h5py.File('cn_metrics.hdf5', 'a') as f:
+    file_path = 'cn.txt'
+    cn_models = pd.read_csv(file_path, sep=',')
+    # for index, row in cn_models.iterrows():
+    index = metrics_config['index']
+    row = cn_models.iloc[index]
+    print(index)
+    vae = load_model(config=vae_config['autoencoder'], 
+                        model_class = AutoencoderKL,
+                        file_prefix = 'vae', 
+                        model_prefix = 'autoencoder',
+                        device = device, 
+                        path = config['project_dir'] +'/'+ row['vae'])
 
-            ldm = load_model(config=ldm_config['unet'],
-                                model_class = DiffusionModelUNet,
-                                file_prefix = 'ldm', 
-                                model_prefix = 'unet',
-                                device = device, 
-                                path = config['project_dir'] +'/'+ row['ldm'])
+    ldm = load_model(config=ldm_config['unet'],
+                        model_class = DiffusionModelUNet,
+                        file_prefix = 'ldm', 
+                        model_prefix = 'unet',
+                        device = device, 
+                        path = config['project_dir'] +'/'+ row['ldm'])
 
-            cn = load_model(config=cn_config['cn'],
-                                model_class = ControlNet,
-                                file_prefix = 'cn', 
-                                model_prefix = 'cn',
-                                device = device, 
-                                path = config['project_dir'] +'/'+ row['cn'])
+    cn = load_model(config=cn_config['cn'],
+                        model_class = ControlNet,
+                        file_prefix = 'cn', 
+                        model_prefix = 'cn',
+                        device = device, 
+                        path = config['project_dir'] +'/'+ row['cn'])
 
-            # cn = torch.nn.DataParallel(cn).to(device)
-            # ldm = torch.nn.DataParallel(ldm).to(device)
-            # Inferer initialization
-            scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
-            check_data = next(iter(train_loader))
-            with torch.no_grad(), autocast(enabled=True):
-                z = vae.encode_stage_2_inputs(check_data['image'].to(device))
+    # cn = torch.nn.DataParallel(cn).to(device)
+    # ldm = torch.nn.DataParallel(ldm).to(device)
+    # Inferer initialization
+    scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
+    check_data = next(iter(train_loader))
+    with torch.no_grad(), autocast(enabled=True):
+        z = vae.encode_stage_2_inputs(check_data['image'].to(device))
+    scale_factor = 1 / torch.std(z)
+
+    controlnet_inferer = ControlNetDiffusionInferer(scheduler)
+    inferer = DiffusionInferer(scheduler)
+
+    cn.eval()
+    synth_features = []
+    real_features = []
+    mmd_scores = []
+    ms_ssim_recon_scores = []
+    ssim_recon_scores = []
+    
+
+    for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
+        images = batch["image"].to(device)
+        masks = batch["cond"].to(device)
+
+        sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
+        with torch.no_grad(), autocast(enabled=True):
+            z = vae.encode_stage_2_inputs(images)
             scale_factor = 1 / torch.std(z)
-
-            controlnet_inferer = ControlNetDiffusionInferer(scheduler)
-            inferer = DiffusionInferer(scheduler)
-
-            cn.eval()
-            synth_features = []
-            real_features = []
-            mmd_scores = []
-            ms_ssim_recon_scores = []
-            ssim_recon_scores = []
+            for t in scheduler.timesteps:
+                down_block_res_samples, mid_block_res_sample = cn(
+                    x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=masks
+                )
+                noise_pred = ldm(
+                    sample,
+                    timesteps=torch.Tensor([t]).to(device),
+                    down_block_additional_residuals=down_block_res_samples,
+                    mid_block_additional_residual=mid_block_res_sample,
+                )
+                sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
+            output = vae.decode(sample) / scale_factor
             
+            # Get the features for the real data
+            real_eval_feats = get_features(images, radnet)
+            real_features.append(real_eval_feats)
+            # Get the features for the synthetic data
+            synth_eval_feats = get_features(output, radnet)
+            synth_features.append(synth_eval_feats)
+            # MMD scores
+            mmd_scores.append(mmd(images, output))
+            # MS_SSIM and SSIM scores
+            ms_ssim_recon_scores.append(ms_ssim(images, output))
+            ssim_recon_scores.append(ssim(images, output))
 
-            for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
-                images = batch["image"].to(device)
-                masks = batch["cond"].to(device)
+    # fid    
+    synth_features = torch.vstack(synth_features)
+    real_features = torch.vstack(real_features)
+    fid_score = fid(synth_features, real_features)
+    fid_score = fid_score.cpu().numpy()
+    # mmd
+    mmd_scores = torch.stack(mmd_scores)
+    # ms_ssim and ssim
+    ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
+    ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
 
-                sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
-                with torch.no_grad(), autocast(enabled=True):
-                    z = vae.encode_stage_2_inputs(images)
-                    scale_factor = 1 / torch.std(z)
-                    for t in scheduler.timesteps:
-                        down_block_res_samples, mid_block_res_sample = cn(
-                            x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=masks
-                        )
-                        noise_pred = ldm(
-                            sample,
-                            timesteps=torch.Tensor([t]).to(device),
-                            down_block_additional_residuals=down_block_res_samples,
-                            mid_block_additional_residual=mid_block_res_sample,
-                        )
-                        sample, _ = scheduler.step(model_output=noise_pred, timestep=t, sample=sample)
-                    output = vae.decode(sample) / scale_factor
-                    
-                    # Get the features for the real data
-                    real_eval_feats = get_features(images, radnet)
-                    real_features.append(real_eval_feats)
-                    # Get the features for the synthetic data
-                    synth_eval_feats = get_features(output, radnet)
-                    synth_features.append(synth_eval_feats)
-                    # MMD scores
-                    mmd_scores.append(mmd(images, output))
-                    # MS_SSIM and SSIM scores
-                    ms_ssim_recon_scores.append(ms_ssim(images, output))
-                    ssim_recon_scores.append(ssim(images, output))
+    # group = f.create_group(f'score_{index}')
+    # group.attrs['vae'] = row['vae']
+    # group.attrs['ldm'] = row['ldm']
+    # group.attrs['cn'] = row['cn']
+    # group.attrs['fid'] = fid_score
+    # group.attrs['mmd'] = [mmd_scores.mean().item(), mmd_scores.std().item()]
+    # group.attrs['ms_ssim'] = [ms_ssim_recon_scores.mean().item(), ms_ssim_recon_scores.std().item()]
+    # group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
 
-            # fid    
-            synth_features = torch.vstack(synth_features)
-            real_features = torch.vstack(real_features)
-            fid_score = fid(synth_features, real_features)
-            fid_score = fid_score.cpu().numpy()
-            # mmd
-            mmd_scores = torch.stack(mmd_scores)
-            # ms_ssim and ssim
-            ms_ssim_recon_scores = torch.cat(ms_ssim_recon_scores, dim=0)
-            ssim_recon_scores = torch.cat(ssim_recon_scores, dim=0)
+    print(f"Score {index}:")
+    print(f"  VAE: {row['vae']}")
+    print(f"  LDM: {row['ldm']}")
+    print(f"  CN: {row['cn']}")
+    print(f"  FID: {fid_score}")
+    print(f"  MMD: Mean = {mmd_scores.mean().item()}, Std = {mmd_scores.std().item()}")
+    print(f"  MS-SSIM: Mean = {ms_ssim_recon_scores.mean().item()}, Std = {ms_ssim_recon_scores.std().item()}")
+    print(f"  SSIM: Mean = {ssim_recon_scores.mean().item()}, Std = {ssim_recon_scores.std().item()}")
 
-            group = f.create_group(f'score_{index}')
-            group.attrs['vae'] = row['vae']
-            group.attrs['ldm'] = row['ldm']
-            group.attrs['cn'] = row['cn']
-            group.attrs['fid'] = fid_score
-            group.attrs['mmd'] = [mmd_scores.mean().item(), mmd_scores.std().item()]
-            group.attrs['ms_ssim'] = [ms_ssim_recon_scores.mean().item(), ms_ssim_recon_scores.std().item()]
-            group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
+    del vae
+    del ldm
+    del cn
 
-            print(f"Score {index}:")
-            print(f"  VAE: {row['vae']}")
-            print(f"  LDM: {row['ldm']}")
-            print(f"  CN: {row['cn']}")
-            print(f"  FID: {fid_score}")
-            print(f"  MMD: Mean = {mmd_scores.mean().item()}, Std = {mmd_scores.std().item()}")
-            print(f"  MS-SSIM: Mean = {ms_ssim_recon_scores.mean().item()}, Std = {ms_ssim_recon_scores.std().item()}")
-            print(f"  SSIM: Mean = {ssim_recon_scores.mean().item()}, Std = {ssim_recon_scores.std().item()}")
-
-            del vae
-            del ldm
-            del cn
-            break
 
