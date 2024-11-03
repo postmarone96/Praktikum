@@ -43,7 +43,7 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 30,
+    "batch_size": 32,
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
@@ -128,7 +128,7 @@
     "sampling":{
     "number_of_samples": 50,
     "num_inference_steps": 1000,
-    "noise_shape": [30, 3, 80, 80],
+    "noise_shape": [32, 3, 80, 80],
     "intermediate_steps": 100
     }
   },
