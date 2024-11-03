@@ -305,13 +305,13 @@ elif metrics_config['model'] == 'cn':
             group.attrs['ssim'] = [ssim_recon_scores.mean().item(), ssim_recon_scores.std().item()]
 
             print(f"Score {index}:")
-        print(f"  VAE: {row['vae']}")
-        print(f"  LDM: {row['ldm']}")
-        print(f"  CN: {row['cn']}")
-        print(f"  FID: {fid_score}")
-        print(f"  MMD: Mean = {mmd_scores.mean().item()}, Std = {mmd_scores.std().item()}")
-        print(f"  MS-SSIM: Mean = {ms_ssim_recon_scores.mean().item()}, Std = {ms_ssim_recon_scores.std().item()}")
-        print(f"  SSIM: Mean = {ssim_recon_scores.mean().item()}, Std = {ssim_recon_scores.std().item()}")
+            print(f"  VAE: {row['vae']}")
+            print(f"  LDM: {row['ldm']}")
+            print(f"  CN: {row['cn']}")
+            print(f"  FID: {fid_score}")
+            print(f"  MMD: Mean = {mmd_scores.mean().item()}, Std = {mmd_scores.std().item()}")
+            print(f"  MS-SSIM: Mean = {ms_ssim_recon_scores.mean().item()}, Std = {ms_ssim_recon_scores.std().item()}")
+            print(f"  SSIM: Mean = {ssim_recon_scores.mean().item()}, Std = {ssim_recon_scores.std().item()}")
 
             del vae
             del ldm
