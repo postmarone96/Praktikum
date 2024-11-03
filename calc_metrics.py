@@ -206,31 +206,31 @@ elif metrics_config['model'] == 'ldm':
             del ldm
 
 elif metrics_config['model'] == 'cn':
-    with h5py.File('cn_metrics.hdf5', 'w') as f:
+    with h5py.File('cn_metrics.hdf5', 'r+') as f:
         file_path = 'cn.txt'
         cn_models = pd.read_csv(file_path, sep=',')
         for index, row in cn_models.iterrows():
             print(index)
             vae = load_model(config=vae_config['autoencoder'], 
-                                            model_class = AutoencoderKL,
-                                            file_prefix = 'vae', 
-                                            model_prefix = 'autoencoder',
-                                            device = device, 
-                                            path = config['project_dir'] +'/'+ row['vae'])
+                                model_class = AutoencoderKL,
+                                file_prefix = 'vae', 
+                                model_prefix = 'autoencoder',
+                                device = device, 
+                                path = config['project_dir'] +'/'+ row['vae'])
 
             ldm = load_model(config=ldm_config['unet'],
-                                        model_class = DiffusionModelUNet,
-                                        file_prefix = 'ldm', 
-                                        model_prefix = 'unet',
-                                        device = device, 
-                                        path = config['project_dir'] +'/'+ row['ldm'])
+                                model_class = DiffusionModelUNet,
+                                file_prefix = 'ldm', 
+                                model_prefix = 'unet',
+                                device = device, 
+                                path = config['project_dir'] +'/'+ row['ldm'])
 
             cn = load_model(config=cn_config['cn'],
-                                        model_class = ControlNet,
-                                        file_prefix = 'cn', 
-                                        model_prefix = 'cn',
-                                        device = device, 
-                                        path = config['project_dir'] +'/'+ row['cn'])
+                                model_class = ControlNet,
+                                file_prefix = 'cn', 
+                                model_prefix = 'cn',
+                                device = device, 
+                                path = config['project_dir'] +'/'+ row['cn'])
 
             cn = torch.nn.DataParallel(cn).to(device)
             ldm = torch.nn.DataParallel(ldm).to(device)
