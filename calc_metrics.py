@@ -256,9 +256,6 @@ elif metrics_config['model'] == 'cn':
                 images = batch["image"].to(device)
                 masks = batch["cond"].to(device)
 
-                print(f"Batch {batch_idx}: images shape = {images.shape}")
-                print(f"Batch {batch_idx}: masks shape = {masks.shape}")
-
                 sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
                 with torch.no_grad(), autocast(enabled=True):
                     z = vae.encode_stage_2_inputs(images)
