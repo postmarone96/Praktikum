@@ -42,7 +42,8 @@ for item in contents:
 # Prepare Dataset
 train_dataset, _ = setup_datasets(  os.path.basename(metrics_config['dataset']),
                                     input_channels=config["dataset"]['input_channels'], 
-                                    condition=config["dataset"]['condition'])
+                                    condition=config["dataset"]['condition'],
+                                    validation_split=0.9)
 
 train_loader = DataLoader(  train_dataset, 
                             batch_size=config["dataset"]["batch_size"], 
