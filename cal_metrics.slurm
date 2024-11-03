@@ -5,12 +5,13 @@
 #SBATCH --output=o_%j.txt
 #SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:2
 #SBATCH --mem=160G
 #SBATCH --time=2-00:00:00
 #SBATCH --nice=1000
-#SBATCH --qos=gpu_reservation
-#SBATCH --reservation=rocky_linux_9_test 
+#SBATCH --qos=gpu_normal
+##SBATCH -w supergpu02
+
 
 ## Initiate directories
 SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID
