@@ -14,15 +14,15 @@
 
 
 ## Initiate directories
-SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID
+SCRATCH_DIR=/localscratch/marouane.hajri/job_$SLURM_JOB_ID/
 VAE_LDM_TXT=$P_DIR/vae_ldm.txt
 CN_TXT=$P_DIR/cn.txt
 TARGET_DIR=$SLURM_SUBMIT_DIR/${MODEL}
 RADNET=$P_DIR/RadImageNet-ResNet50_notop.pth
 
 ## Create directories
-mkdir $TARGET_DIR
-mkdir $SCRATCH_DIR
+mkdir -p $TARGET_DIR
+mkdir -p $SCRATCH_DIR
 
 FILENAME=$(date "+%Y%m%d.txt")
 FILEPATH=$TARGET_DIR/$FILENAME
