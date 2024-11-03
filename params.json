@@ -107,7 +107,7 @@
       "num_head_channels": [0, 256, 512]
     },
     "ddpm_scheduler": {
-      "num_train_timesteps": 100,
+      "num_train_timesteps": 1000,
       "schedule": "linear_beta",
       "beta_start": 0.0015,
       "beta_end": 0.0195
@@ -127,7 +127,7 @@
     },
     "sampling":{
     "number_of_samples": 50,
-    "num_inference_steps": 10,
+    "num_inference_steps": 1000,
     "noise_shape": [30, 3, 80, 80],
     "intermediate_steps": 100
     }
@@ -145,7 +145,7 @@
       "conditioning_embedding_in_channels": 2
     },
     "ddpm_scheduler": {
-      "num_train_timesteps": 100
+      "num_train_timesteps": 1000
     },
     "optimizer": {
       "lr": 1e-6,
