@@ -164,7 +164,7 @@
 
   "Metrics":{
     "model":"cn",
-    "dataset": "/home/viro/marouane.hajri/Praktikum/metrics_cn/metrics_dataset.hdf5 "
+    "dataset": "/home/viro/marouane.hajri/Praktikum/metrics_cn/metrics_dataset.hdf5"
   },
   
   "Inf":{
