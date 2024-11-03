@@ -34,7 +34,7 @@ cn_config = config['CN']
 metrics_config = config['Metrics']
 
 # Prepare Dataset
-train_dataset, _ = setup_datasets(  os.path.basename(metrics_config['dataset']),
+train_dataset, _ = setup_datasets(  metrics_config['dataset'],
                                     input_channels=config["dataset"]['input_channels'], 
                                     condition=config["dataset"]['condition'])
 
