@@ -232,8 +232,8 @@ elif metrics_config['model'] == 'cn':
                                 device = device, 
                                 path = config['project_dir'] +'/'+ row['cn'])
 
-            cn = torch.nn.DataParallel(cn).to(device)
-            ldm = torch.nn.DataParallel(ldm).to(device)
+            # cn = torch.nn.DataParallel(cn).to(device)
+            # ldm = torch.nn.DataParallel(ldm).to(device)
             # Inferer initialization
             scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
             check_data = next(iter(train_loader))
