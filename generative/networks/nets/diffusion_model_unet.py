@@ -1919,8 +1919,6 @@ class DiffusionModelUNet(nn.Module):
             for down_block_res_sample, down_block_additional_residual in zip(
                 down_block_res_samples, down_block_additional_residuals
             ):
-                print("down_block_res_sample shape:", down_block_res_sample.shape)
-                print("down_block_additional_residual shape:", down_block_additional_residual.shape)
                 down_block_res_sample = down_block_res_sample + down_block_additional_residual
                 new_down_block_res_samples += (down_block_res_sample,)
 
