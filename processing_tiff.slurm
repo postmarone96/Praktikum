@@ -23,7 +23,7 @@ eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
 
-cp $P_DIR/preprocessing_tiff.py $SCRATCH_DIR/
+cp $P_DIR/create_debug_hdf5.py $SCRATCH_DIR/
 
 
-python -u preprocessing_tiff.py
+python -u create_debug_hdf5.py
