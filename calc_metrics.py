@@ -267,7 +267,7 @@ elif metrics_config['model'] == 'cn':
         with torch.no_grad(), autocast(enabled=True):
             z = vae.encode_stage_2_inputs(images)
             scale_factor = 1 / torch.std(z)
-            for t in scheduler.timesteps:
+            for t in tqdm(scheduler.timesteps):
                 down_block_res_samples, mid_block_res_sample = cn(
                     x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=masks
                 )
