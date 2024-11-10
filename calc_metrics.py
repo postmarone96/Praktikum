@@ -235,8 +235,10 @@ elif metrics_config['model'] == 'cn':
                         device = device, 
                         path = config['project_dir'] +'/'+ row['cn'])
 
-    # cn = torch.nn.DataParallel(cn).to(device)
-    # ldm = torch.nn.DataParallel(ldm).to(device)
+
+    cn = torch.nn.DataParallel(cn).to(device)
+    ldm = torch.nn.DataParallel(ldm).to(device)
+
     # Inferer initialization
     scheduler = DDPMScheduler(**ldm_config['ddpm_scheduler'])
     check_data = next(iter(train_loader))
@@ -258,8 +260,10 @@ elif metrics_config['model'] == 'cn':
     for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
         images = batch["image"].to(device)
         masks = batch["cond"].to(device)
+        batch_size = images.shape[0]
 
-        sample = torch.randn(ldm_config['sampling']['noise_shape']).to(device)
+        sample = torch.randn([batch_size, 3, 80, 80]).to(device)
+
         with torch.no_grad(), autocast(enabled=True):
             z = vae.encode_stage_2_inputs(images)
             scale_factor = 1 / torch.std(z)
