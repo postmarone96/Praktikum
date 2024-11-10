@@ -14,7 +14,7 @@
 
 
 ## Initiate directories
-SCRATCH_DIR=/localscratch/marouane.hajri/job_${SLURM_JOB_ID}
+SCRATCH_DIR=/localscratch/marouane.hajri/job_${SLURM_JOB_ID}/
 VAE_LDM_TXT=$P_DIR/vae_ldm.txt
 CN_TXT=$P_DIR/cn.txt
 TARGET_DIR=$SLURM_SUBMIT_DIR/${MODEL}
