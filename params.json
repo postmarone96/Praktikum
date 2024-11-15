@@ -1,6 +1,6 @@
 {
   "broken_ds": 0,
-  "model": "vae",
+  "model": "ldm",
   "project_dir": "/home/viro/marouane.hajri/Praktikum",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
@@ -24,8 +24,8 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 0,
-      "directory": "train_xl/train_150/"
+      "id": 29515050,
+      "directory": "train_xs/"
     },
 
     "ldm": {
