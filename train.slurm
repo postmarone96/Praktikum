@@ -144,7 +144,6 @@ check_remaining_time_and_cleanup &
 echo "Changing to scratch directory..."
 cd $SCRATCH_DIR
 
-
 source /home/viro/marouane.hajri/miniconda3/bin/activate myenv
 eval "$(conda shell.bash hook)"
 conda activate myenv
