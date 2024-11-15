@@ -16,7 +16,7 @@
 start_time=$(date +%s)
 
 ## Directory and file definition
-SCRATCH_DIR=/localscratch/$USER/job_$SLURM_JOB_ID
+SCRATCH_DIR="/localscratch/$USER/job_$SLURM_JOB_ID"
 PREPROCESSING_OUTPUT=$SCRATCH_DIR/dataset.hdf5
 TARGET_DIR=$SLURM_SUBMIT_DIR/job_$SLURM_JOB_ID
 DATASET=$SLURM_SUBMIT_DIR/data/dataset.hdf5 ## check this out !!!!
