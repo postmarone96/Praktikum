@@ -248,7 +248,7 @@ data_dict = {}
 for i in range(number_of_samples):
     unet.eval()
     scheduler.set_timesteps(num_inference_steps=ldm_config['sampling']['num_inference_steps'])
-    noise = torch.randn(ldm_config['sampling']['noise_shape'])
+    noise = torch.randn([1, 3, 80, 80])
     noise = noise.to(device)
     
     with torch.no_grad():
