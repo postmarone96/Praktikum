@@ -83,12 +83,12 @@
       "lr_d": 5e-6,
       "scheduler": {
           "mode": "min",
-          "factor": 0.5,
-          "patience": 20
+          "factor": 0.2,
+          "patience": 10
         }
     },
     "training": {
-            "n_epochs": 100,
+            "n_epochs": 200,
             "val_interval": 2,
             "autoencoder_warm_up_n_epochs": -1,
             "num_example_images": 4,
@@ -151,12 +151,12 @@
       "lr": 1e-6,
       "scheduler": {
         "mode": "min",
-        "factor": 0.5,
-        "patience": 20
+        "factor": 0.1,
+        "patience": 10
       }
     },
     "training": {
-      "n_epochs": 100,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }
