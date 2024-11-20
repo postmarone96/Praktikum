@@ -75,6 +75,7 @@ cp $P_DIR/predict.py $SCRATCH_DIR/
 
 cd $SCRATCH_DIR
 
+source /home/viro/marouane.hajri/miniconda3/bin/activate myenv
 eval "$(conda shell.bash hook)"
 conda activate myenv
 echo "env activated"
