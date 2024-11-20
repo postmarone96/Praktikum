@@ -162,7 +162,8 @@ try:
 
             images = batch["image"].to(device)
             masks = batch["cond"].to(device)
-
+            masks[:, 0, :, :] *= 0.6
+            
             #  Zero the gradients of the optimizer
             optimizer.zero_grad(set_to_none=True)
 
