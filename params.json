@@ -24,7 +24,7 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 29585368,
+      "id": 21911969,
       "directory": "train_xl/train_50"
     },
 
