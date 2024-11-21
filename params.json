@@ -43,7 +43,7 @@
 
   "dataset": {
     "validation_split": 0.2,
-    "batch_size": 10,
+    "batch_size": 16,
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
@@ -148,15 +148,15 @@
       "num_train_timesteps": 1000
     },
     "optimizer": {
-      "lr": 1e-6,
+      "lr": 1e-4,
       "scheduler": {
         "mode": "min",
-        "factor": 0.5,
-        "patience": 7
+        "factor": 0.2,
+        "patience": 5
       }
     },
     "training": {
-      "n_epochs": 56,
+      "n_epochs": 50,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }

@@ -26,7 +26,9 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
 from helper_functions import *
+from generative.metrics import *
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from generative.losses.perceptual import PerceptualLoss
 from tqdm import tqdm
 from generative.inferers import DiffusionInferer, ControlNetDiffusionInferer
 from generative.networks.nets import DiffusionModelUNet, ControlNet, AutoencoderKL
@@ -108,6 +110,13 @@ optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optim
 
 #Learning Rate Scheduler
 scheduler_lr = ReduceLROnPlateau(optimizer, **cn_config['optimizer']['scheduler'])
+
+# perceptual loss function
+perceptual_loss = PerceptualLoss(spatial_dims=vae_config['loss']['spatial_dims'], network_type=vae_config['loss']['perceptual_loss']).to(device)
+perceptual_weight = vae_config['loss']['perceptual_weight']
+
+# SSIM loss
+ssim = SSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
 
 # Upload Parameters from Checkpoint
 checkpoint_path = glob.glob('cn_checkpoint_epoch_*.pth')
@@ -191,7 +200,14 @@ try:
                 )
 
                 # Calculate MSE loss 
-                loss = F.mse_loss(noise_pred.float(), noise.float())
+                # loss = F.mse_loss(noise_pred.float(), noise.float())
+                p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                ssim_loss = ssim(noise.float(), noise_pred.float())
+                l1_loss = torch.nn.L1Loss(noise_pred.float(), noise.float())
+                loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
             # Backpropagate and update weights
             scaler.scale(loss).backward()
@@ -239,7 +255,14 @@ try:
                         )
 
                         # MSE loss calculation
-                        val_loss = F.mse_loss(noise_pred.float(), noise.float())
+                        # val_loss = F.mse_loss(noise_pred.float(), noise.float())
+                        p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                        p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                        p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                        p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                        ssim_loss = ssim(noise.float(), noise_pred.float())
+                        l1_loss = torch.nn.L1Loss(noise_pred.float(), noise.float())
+                        loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
                 val_epoch_loss += val_loss.item()
                 progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
