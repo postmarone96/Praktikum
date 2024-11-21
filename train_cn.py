@@ -206,7 +206,8 @@ try:
                 p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
                 p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
                 ssim_loss = ssim(noise.float(), noise_pred.float())
-                l1_loss = torch.nn.L1Loss(noise_pred.float(), noise.float())
+                _l1_loss = torch.nn.L1Loss()
+                l1_loss = _l1_loss(noise_pred.float(), noise.float())
                 loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
             # Backpropagate and update weights
@@ -261,7 +262,8 @@ try:
                         p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
                         p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
                         ssim_loss = ssim(noise.float(), noise_pred.float())
-                        l1_loss = torch.nn.L1Loss(noise_pred.float(), noise.float())
+                        _l1_loss = torch.nn.L1Loss()
+                        l1_loss = _l1_loss(noise_pred.float(), noise.float())
                         loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
                 val_epoch_loss += val_loss.item()
