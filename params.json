@@ -1,6 +1,6 @@
 {
   "broken_ds": 0,
-  "model": "cn",
+  "model": "ldm",
   "project_dir": "/home/viro/marouane.hajri/Praktikum",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xs",
+    "size": "xl",
     "xs":{
       "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
       "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
@@ -24,13 +24,13 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 21911969,
+      "id": 29585368,
       "directory": "train_xl/train_50"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 22342690,
+      "id": 0,
       "directory": "train_xl/train_50"
     },
 
@@ -47,15 +47,15 @@
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
-    "input_channels": ["raw"],
-    "condition": ["bg", "gt"]
+    "input_channels": ["raw", "bg"],
+    "condition": ["gt"]
   },
 
   "VAE":{
     "autoencoder": {
       "spatial_dims": 2,
-      "in_channels": 1,
-      "out_channels": 1,
+      "in_channels": 2,
+      "out_channels": 2,
       "num_channels": [128, 128, 256],
       "latent_channels": 3,
       "num_res_blocks": 2,
@@ -67,8 +67,8 @@
       "spatial_dims": 2,
       "num_layers_d": 4,
       "num_channels": 64,
-      "in_channels": 1,
-      "out_channels": 1
+      "in_channels": 2,
+      "out_channels": 2
     },
     "loss": {
       "adv_loss": "least_squares",
@@ -83,12 +83,12 @@
       "lr_d": 5e-6,
       "scheduler": {
           "mode": "min",
-          "factor": 0.2,
-          "patience": 10
+          "factor": 0.5,
+          "patience": 20
         }
     },
     "training": {
-            "n_epochs": 200,
+            "n_epochs": 100,
             "val_interval": 2,
             "autoencoder_warm_up_n_epochs": -1,
             "num_example_images": 4,
@@ -116,12 +116,12 @@
       "lr": 1e-6,
       "scheduler": {
           "mode": "min",
-          "factor": 0.1,
-          "patience": 10
+          "factor": 0.5,
+          "patience": 20
       }
     },
     "training": {
-      "n_epochs": 200,
+      "n_epochs": 100,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     },
