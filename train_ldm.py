@@ -208,7 +208,7 @@ try:
                         ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
                         _l1_loss = torch.nn.L1Loss()
                         l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                        val_loss = ldm_config["loss"]["alpha"] * l1_loss + ldm_config["loss"]["beta"] * p_loss + ldm_config["loss"]["gamma"] * ssim_loss
+                        loss = ldm_config["loss"]["alpha"] * l1_loss + ldm_config["loss"]["beta"] * p_loss + ldm_config["loss"]["gamma"] * ssim_loss
 
                     val_loss += loss.item()
             val_loss /= val_step
