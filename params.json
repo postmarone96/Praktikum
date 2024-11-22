@@ -8,7 +8,7 @@
     "dim": 320,
     "pad": 10,
     "gt_th": 0.5,
-    "size": "xs",
+    "size": "xl",
     "xs":{
       "bg" : "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/bg",
       "raw": "/home/viro/marouane.hajri/Praktikum/train_xs/data/test/raw",
