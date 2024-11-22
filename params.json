@@ -24,19 +24,19 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 22326424,
-      "directory": "train_xl/train_290"
+      "id": 21911969,
+      "directory": "train_xl/train_50"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 22856248,
-      "directory": "train_xl/train_290"
+      "id": 22342690,
+      "directory": "train_xl/train_50"
     },
 
     "cn": {
-      "cp": 0,
-      "id": 0,
+      "cp": 45,
+      "id": 29610036,
       "directory": "train_xs/"
     }
   },
@@ -151,8 +151,8 @@
       "lr": 1e-4,
       "scheduler": {
         "mode": "min",
-        "factor": 0.2,
-        "patience": 5
+        "factor": 0.5,
+        "patience": 10
       }
     },
     "loss":{
@@ -161,7 +161,7 @@
       "gamma": 0.2
     },
     "training": {
-      "n_epochs": 50,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }
