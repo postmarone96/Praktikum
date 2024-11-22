@@ -131,7 +131,7 @@
       "num_epochs_checkpoints": 5
     },
     "sampling":{
-    "number_of_samples": 50,
+    "number_of_samples": 100,
     "num_inference_steps": 1000,
     "noise_shape": [50, 3, 80, 80],
     "intermediate_steps": 100
