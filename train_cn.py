@@ -207,7 +207,7 @@ try:
                 ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
                 _l1_loss = torch.nn.L1Loss()
                 l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
+                val_loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
 
             # Backpropagate and update weights
             scaler.scale(loss).backward()
@@ -262,7 +262,8 @@ try:
                         ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
                         _l1_loss = torch.nn.L1Loss()
                         l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                        val_loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
+                        val_loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
+                        # val_loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
                 val_epoch_loss += val_loss.item()
                 progress_bar.set_postfix({"val_loss": val_epoch_loss / (step + 1)})
