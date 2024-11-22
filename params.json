@@ -126,12 +126,12 @@
       }
     },
     "training": {
-      "n_epochs": 50,
+      "n_epochs": 100,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     },
     "sampling":{
-    "number_of_samples": 100,
+    "number_of_samples": 50,
     "num_inference_steps": 1000,
     "noise_shape": [50, 3, 80, 80],
     "intermediate_steps": 100
