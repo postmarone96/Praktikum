@@ -93,6 +93,13 @@ optimizer = torch.optim.Adam(unet.parameters(), lr=ldm_config['optimizer']['lr']
 # Learning Rate Scheduler
 scheduler_lr = ReduceLROnPlateau(optimizer, **ldm_config['optimizer']['scheduler'])
 
+# perceptual loss function
+perceptual_loss = PerceptualLoss(spatial_dims=vae_config['loss']['spatial_dims'], network_type=vae_config['loss']['perceptual_loss']).to(device)
+perceptual_weight = vae_config['loss']['perceptual_weight']
+
+# SSIM loss
+ssim = SSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
+
 # Scaler
 scaler = GradScaler()
 
@@ -153,7 +160,16 @@ try:
                 noise_pred = inferer(
                     inputs=images, diffusion_model=unet, noise=noise, timesteps=timesteps, autoencoder_model=autoencoderkl
                 )
-                loss = F.mse_loss(noise_pred.float(), noise.float())
+                # loss = F.mse_loss(noise_pred.float(), noise.float())
+                p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
+                _l1_loss = torch.nn.L1Loss()
+                l1_loss = _l1_loss(noise_pred.float(), noise.float())
+                loss = ldm_config["loss"]["alpha"] * l1_loss + ldm_config["loss"]["beta"] * p_loss + ldm_config["loss"]["gamma"] * ssim_loss
+
             scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
@@ -182,7 +198,16 @@ try:
                             timesteps=timesteps,
                             autoencoder_model=autoencoderkl,
                         )
-                        loss = F.mse_loss(noise_pred.float(), noise.float())
+                        # loss = F.mse_loss(noise_pred.float(), noise.float())
+                        p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                        p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                        p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                        p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                        ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
+                        _l1_loss = torch.nn.L1Loss()
+                        l1_loss = _l1_loss(noise_pred.float(), noise.float())
+                        val_loss = ldm_config["loss"]["alpha"] * l1_loss + ldm_config["loss"]["beta"] * p_loss + ldm_config["loss"]["gamma"] * ssim_loss
+
                     val_loss += loss.item()
             val_loss /= val_step
             scheduler_lr.step(val_loss)

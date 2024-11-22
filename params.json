@@ -1,6 +1,6 @@
 {
   "broken_ds": 0,
-  "model": "cn",
+  "model": "ldm",
   "project_dir": "/home/viro/marouane.hajri/Praktikum",
   "ids_file": "/home/viro/marouane.hajri/Praktikum/ids.txt",
 
@@ -30,13 +30,13 @@
 
     "ldm": {
       "cp": 0,
-      "id": 22342690,
+      "id": 0,
       "directory": "train_xl/train_50"
     },
 
     "cn": {
-      "cp": 45,
-      "id": 29610036,
+      "cp": 0,
+      "id": 0,
       "directory": "train_xs/"
     }
   },
@@ -112,16 +112,21 @@
       "beta_start": 0.0015,
       "beta_end": 0.0195
     },
+    "loss":{
+      "alpha": 0.5,
+      "beta": 0.3,
+      "gamma": 0.2
+    },
     "optimizer": {
       "lr": 1e-6,
       "scheduler": {
           "mode": "min",
           "factor": 0.5,
-          "patience": 200
+          "patience": 20
       }
     },
     "training": {
-      "n_epochs": 100,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     },
