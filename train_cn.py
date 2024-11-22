@@ -207,7 +207,7 @@ try:
                 ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
                 _l1_loss = torch.nn.L1Loss()
                 l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                val_loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
+                loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
 
             # Backpropagate and update weights
             scaler.scale(loss).backward()
