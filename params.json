@@ -157,8 +157,8 @@
     },
     "loss":{
       "alpha": 0.5,
-      "beta": 0.4,
-      "gamma": 0.1
+      "beta": 0.3,
+      "gamma": 0.2
     },
     "training": {
       "n_epochs": 50,
