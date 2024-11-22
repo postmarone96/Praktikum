@@ -32,6 +32,8 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import ReduceLROnPlateau
+from generative.metrics import *
+from generative.losses.perceptual import PerceptualLoss
 from tqdm import tqdm
 from generative.inferers import LatentDiffusionInferer
 from generative.networks.nets import AutoencoderKL, DiffusionModelUNet
