@@ -24,14 +24,14 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 21911969,
-      "directory": "train_xl/train_50"
+      "id": 22326424,
+      "directory": "train_xl/train_290"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 22342690,
-      "directory": "train_xl/train_50"
+      "id": 22856248,
+      "directory": "train_xl/train_290"
     },
 
     "cn": {
@@ -157,8 +157,8 @@
     },
     "loss":{
       "alpha": 0.5,
-      "beta": 0.3,
-      "gamma": 0.2
+      "beta": 0.4,
+      "gamma": 0.1
     },
     "training": {
       "n_epochs": 50,
