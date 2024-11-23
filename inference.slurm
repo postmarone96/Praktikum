@@ -66,7 +66,6 @@ cp -f $P_DIR/params.json $SCRATCH_DIR/
 ## Copy all the necessary data
 cp -f "$P_DIR/helper_functions.py" "$SCRATCH_DIR"
 cp -f "$P_DIR/calc_metrics.py" "$SCRATCH_DIR"
-cp -f $DATASET $SCRATCH_DIR
 cp $AE $SCRATCH_DIR/
 cp $LDM $SCRATCH_DIR/
 cp $CN $SCRATCH_DIR/
@@ -92,6 +91,7 @@ for file in "$bg_dir"/*; do
     rm -rf $scratch_raw_dir/$filename
     rm -rf $scratch_bg_dir/$filename
     rm -rf $scratch_gt_dir/$filename
+    rm -rf $DATASET
 done
 
 cleanup
