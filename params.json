@@ -30,13 +30,13 @@
 
     "ldm": {
       "cp": 0,
-      "id": 0,
+      "id": 22342690,
       "directory": "train_xl/train_50"
     },
 
     "cn": {
       "cp": 0,
-      "id": 0,
+      "id": 29629472,
       "directory": "train_xs/"
     }
   },
