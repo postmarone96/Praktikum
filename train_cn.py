@@ -170,6 +170,7 @@ try:
         for step, batch in progress_bar:
 
             images = batch["image"].to(device)
+            images *= 3
             masks = batch["cond"].to(device)
             
             #  Zero the gradients of the optimizer
@@ -230,6 +231,7 @@ try:
             val_epoch_loss = 0
             for step, batch in enumerate(val_loader):
                 images = batch["image"].to(device)
+                images *= 3
                 masks = batch["cond"].to(device)
                 with torch.no_grad():
                     with autocast(enabled=True):
