@@ -157,7 +157,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
 
         # Assuming you have a scheduler for timesteps
         middle_step = len(scheduler.timesteps) // 2 
-        for t_idx, t in enumerate(scheduler.timesteps):
+        for t_idx, t in enumerate(tqdm(scheduler.timesteps)):
             down_block_res_samples, mid_block_res_sample = controlnet(
                 x=sample, timesteps=torch.Tensor([t]).to(device).long(), controlnet_cond=m
             )
