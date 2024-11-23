@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #SBATCH -c 16
-#SBATCH -J train_job
+#SBATCH -J Inference
 #SBATCH --output=o_%j.txt
 #SBATCH --error=e_%j.txt
 #SBATCH -p gpu_p
