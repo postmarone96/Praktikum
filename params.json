@@ -179,7 +179,8 @@
   },
   
   "Inf":{
-     "method":1
+     "method":1,
+     "image_scale": false
   }
 }
 
