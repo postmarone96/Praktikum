@@ -29,7 +29,7 @@
     },
 
     "ldm": {
-      "cp": 55,
+      "cp": 0,
       "id": 29630563,
       "directory": "train_xl/train_50"
     },
