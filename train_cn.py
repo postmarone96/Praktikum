@@ -199,15 +199,15 @@ try:
                 )
 
                 # Calculate MSE loss 
-                # loss = F.mse_loss(noise_pred.float(), noise.float())
-                p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
-                p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
-                p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
-                p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
-                ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
-                _l1_loss = torch.nn.L1Loss()
-                l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
+                loss = F.mse_loss(noise_pred.float(), noise.float())
+                # p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                # p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                # p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                # p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                # ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
+                # _l1_loss = torch.nn.L1Loss()
+                # l1_loss = _l1_loss(noise_pred.float(), noise.float())
+                # loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
 
             # Backpropagate and update weights
             scaler.scale(loss).backward()
@@ -254,15 +254,15 @@ try:
                         )
 
                         # MSE loss calculation
-                        # val_loss = F.mse_loss(noise_pred.float(), noise.float())
-                        p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
-                        p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
-                        p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
-                        p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
-                        ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
-                        _l1_loss = torch.nn.L1Loss()
-                        l1_loss = _l1_loss(noise_pred.float(), noise.float())
-                        val_loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
+                        val_loss = F.mse_loss(noise_pred.float(), noise.float())
+                        # p_loss_1 = perceptual_loss(noise_pred[:, 0, :, :].unsqueeze(1).float(), noise[:, 0, :, :].unsqueeze(1).float())
+                        # p_loss_2 = perceptual_loss(noise_pred[:, 1, :, :].unsqueeze(1).float(), noise[:, 1, :, :].unsqueeze(1).float())
+                        # p_loss_3 = perceptual_loss(noise_pred[:, 2, :, :].unsqueeze(1).float(), noise[:, 2, :, :].unsqueeze(1).float())
+                        # p_loss = (p_loss_1 + p_loss_2 + p_loss_3) / 3
+                        # ssim_loss = ssim(noise.float(), noise_pred.float()).mean()
+                        # _l1_loss = torch.nn.L1Loss()
+                        # l1_loss = _l1_loss(noise_pred.float(), noise.float())
+                        # val_loss = cn_config["loss"]["alpha"] * l1_loss + cn_config["loss"]["beta"] * p_loss + cn_config["loss"]["gamma"] * ssim_loss
                         # val_loss = 0.8 * l1_loss + 0.1 * p_loss + 0.1 * ssim_loss
 
                 val_epoch_loss += val_loss.item()
