@@ -382,7 +382,7 @@ class ControlNet(nn.Module):
 
         controlnet_cond = self.controlnet_cond_embedding(controlnet_cond)
 
-        h += controlnet_cond
+        h -= controlnet_cond
 
         # 4. down
         if context is not None and self.with_conditioning is False:
