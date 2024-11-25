@@ -170,7 +170,7 @@ try:
         for step, batch in progress_bar:
 
             images = batch["image"].to(device)
-            masks = batch["cond"].to(device)
+            masks = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
             
             #  Zero the gradients of the optimizer
             optimizer.zero_grad(set_to_none=True)
@@ -230,7 +230,8 @@ try:
             val_epoch_loss = 0
             for step, batch in enumerate(val_loader):
                 images = batch["image"].to(device)
-                masks = batch["cond"].to(device)
+                cond = batch["cond"].to(device)
+                masks = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
                 with torch.no_grad():
                     with autocast(enabled=True):
                         # Input encoding
