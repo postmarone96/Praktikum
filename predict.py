@@ -138,10 +138,7 @@ slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
-        
         z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
-        scale_factor = 1 / torch.std(z)
-
         # Fall 1:
         if inference_method == 1:
             sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
