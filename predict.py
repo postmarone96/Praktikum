@@ -138,6 +138,10 @@ slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
+        
+        z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
+        scale_factor = 1 / torch.std(z)
+
         # Fall 1:
         if inference_method == 1:
             sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
@@ -152,9 +156,7 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
         elif inference_method == 3 and batch_idx != 0:
             sample = intermediate_noise
         elif inference_method == 3 and batch_idx == 0:
-            sample = intermediate_noise + batch['image']
-        z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
-        scale_factor = 1 / torch.std(z)
+            sample = intermediate_noise + z
         m = batch['cond'].to(device)
 
         # Assuming you have a scheduler for timesteps
