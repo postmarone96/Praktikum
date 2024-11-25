@@ -149,8 +149,10 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
                 noise_list.append(averaged_noise)
             initial_noise = noise_list[-1]
             sample = torch.stack(noise_list)
-        elif inference_method == 3:
+        elif inference_method == 3 and batch_idx != 0:
             sample = intermediate_noise
+        elif inference_method == 3 and batch == 0:
+            sample = intermediate_noise + batch['image']
         z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         scale_factor = 1 / torch.std(z)
         m = batch['cond'].to(device)
