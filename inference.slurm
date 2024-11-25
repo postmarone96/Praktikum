@@ -92,6 +92,7 @@ for file in "$bg_dir"/*; do
     rm -rf $scratch_bg_dir/$filename
     rm -rf $scratch_gt_dir/$filename
     rm -rf $DATASET
+    cp -r $SCRATCH_DIR/*.nii.gz $TARGET_DIR
 done
 
 cleanup
