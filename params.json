@@ -24,19 +24,19 @@
 "jobs": {
     "vae": {
       "cp": 0,
-      "id": 29585368,
+      "id": 21911969,
       "directory": "train_xl/train_50"
     },
 
     "ldm": {
       "cp": 0,
-      "id": 29601009,
+      "id": 22342690,
       "directory": "train_xl/train_50"
     },
 
     "cn": {
       "cp": 0,
-      "id": 0,
+      "id": 22686259,
       "directory": "train_xs/"
     }
   },
@@ -47,15 +47,15 @@
     "shuffle": true,
     "num_workers": 16,
     "persistent_workers": true,
-    "input_channels": ["raw", "bg"],
-    "condition": ["gt"]
+    "input_channels": ["raw"],
+    "condition": ["bg", "gt"]
   },
 
   "VAE":{
     "autoencoder": {
       "spatial_dims": 2,
-      "in_channels": 2,
-      "out_channels": 2,
+      "in_channels": 1,
+      "out_channels": 1,
       "num_channels": [128, 128, 256],
       "latent_channels": 3,
       "num_res_blocks": 2,
@@ -67,8 +67,8 @@
       "spatial_dims": 2,
       "num_layers_d": 4,
       "num_channels": 64,
-      "in_channels": 2,
-      "out_channels": 2
+      "in_channels": 1,
+      "out_channels": 1
     },
     "loss": {
       "adv_loss": "least_squares",
@@ -147,7 +147,7 @@
       "attention_levels": [false, true, true],
       "num_head_channels": [0, 256, 512],
       "conditioning_embedding_num_channels":[16, 32, 64],
-      "conditioning_embedding_in_channels": 1
+      "conditioning_embedding_in_channels": 2
     },
     "ddpm_scheduler": {
       "num_train_timesteps": 1000
@@ -179,7 +179,7 @@
   },
   
   "Inf":{
-     "method":1,
+     "method":3,
      "image_scale": false
   }
 }
