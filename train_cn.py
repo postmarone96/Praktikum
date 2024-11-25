@@ -112,11 +112,11 @@ optimizer = torch.optim.Adam(params=controlnet.parameters(), lr=cn_config['optim
 scheduler_lr = ReduceLROnPlateau(optimizer, **cn_config['optimizer']['scheduler'])
 
 # perceptual loss function
-perceptual_loss = PerceptualLoss(spatial_dims=vae_config['loss']['spatial_dims'], network_type=vae_config['loss']['perceptual_loss']).to(device)
-perceptual_weight = vae_config['loss']['perceptual_weight']
+# perceptual_loss = PerceptualLoss(spatial_dims=vae_config['loss']['spatial_dims'], network_type=vae_config['loss']['perceptual_loss']).to(device)
+# perceptual_weight = vae_config['loss']['perceptual_weight']
 
 # SSIM loss
-ssim = SSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
+# ssim = SSIMMetric(spatial_dims=2, data_range=1.0, kernel_size=4)
 
 # Upload Parameters from Checkpoint
 checkpoint_path = glob.glob('cn_checkpoint_epoch_*.pth')
@@ -170,6 +170,7 @@ try:
         for step, batch in progress_bar:
 
             images = batch["image"].to(device)
+            cond = batch["cond"].to(device)
             masks = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
             
             #  Zero the gradients of the optimizer
