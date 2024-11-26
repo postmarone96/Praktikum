@@ -154,7 +154,8 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
             sample = intermediate_noise
         elif inference_method == 3 and batch_idx == 0:
             sample = intermediate_noise + z
-        m = batch['cond'].to(device)
+        cond = batch['cond'].to(device)
+        m = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
 
         # Assuming you have a scheduler for timesteps
         middle_step = len(scheduler.timesteps) // 2 
@@ -173,16 +174,13 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
                 intermediate_noise = sample.clone()
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
-        print(f"Decoded output_numpy shape (before cropping): {output_numpy.shape}")
         output_numpy = output_numpy[:, 10:-10, 10:-10]
-        print(f"Cropped output_numpy shape: {output_numpy.shape}")
         # output_numpy = np.moveaxis(output_numpy, 0, -1)
         # aggregated_output.append(output_numpy)
         start_slice_idx = slice_idx
         end_slice_idx = slice_idx + batch_size
         if end_slice_idx > total_slices:
             end_slice_idx = total_slices
-        print(f"Target shape in reconstructed_volume[:, :, {start_slice_idx}:{end_slice_idx}]: {reconstructed_volume[:, :, start_slice_idx:end_slice_idx].shape}")
         reconstructed_volume[start_slice_idx:end_slice_idx, :, :] = output_numpy
 
         # Update the slice index for the next batch
