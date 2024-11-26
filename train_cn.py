@@ -281,7 +281,7 @@ try:
             val_losses.append(val_epoch_loss / (step + 1))
 
         # Save checkpoints at specified epoch interval
-        if (epoch % num_epochs_checkpoints == 0 and epoch > 0 and epoch < 100) or (epoch % 20 == 0 and epoch > 100 and num_epochs_checkpoints <= 20):
+        if (epoch % num_epochs_checkpoints == 0 and epoch > 0 and epoch < 100) or (epoch % 10 == 0 and epoch > 100 and num_epochs_checkpoints <= 10):
             save_checkpoint(
                 epoch, f'cn_checkpoint_epoch_{epoch}.pth',
                 cn_state_dict = controlnet.module.state_dict(),
