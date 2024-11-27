@@ -35,8 +35,8 @@
     },
 
     "cn": {
-      "cp": 0,
-      "id": 0,
+      "cp": 20,
+      "id": 29719606,
       "directory": "train_xs/"
     }
   },
@@ -161,7 +161,7 @@
       }
     },
     "training": {
-      "n_epochs": 25,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }
