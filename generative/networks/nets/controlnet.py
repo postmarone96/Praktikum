@@ -107,12 +107,16 @@ class ControlNetConditioningEmbedding(nn.Module):
         embedding = self.conv_in(conditioning)
         embedding = F.silu(embedding)
 
+        input_channel = conditioning[:, 0:1, :, :]
+        downsampled_input = F.interpolate(input_channel, size=(80, 80), mode='bilinear', align_corners=False)
+
         for block in self.blocks:
             embedding = block(embedding)
             embedding = F.silu(embedding)
 
         embedding = self.conv_out(embedding)
-
+        num_channels = embedding.shape[1]
+        embedding += downsampled_input.repeat(1, num_channels, 1, 1)
         return embedding
 
 
