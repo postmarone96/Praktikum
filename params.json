@@ -35,8 +35,8 @@
     },
 
     "cn": {
-      "cp": 20,
-      "id": 29719606,
+      "cp": 0,
+      "id": 0,
       "directory": "train_xs/"
     }
   },
@@ -147,7 +147,7 @@
       "attention_levels": [false, true, true],
       "num_head_channels": [0, 256, 512],
       "conditioning_embedding_num_channels":[16, 32, 64],
-      "conditioning_embedding_in_channels": 1
+      "conditioning_embedding_in_channels": 2
     },
     "ddpm_scheduler": {
       "num_train_timesteps": 1000
@@ -161,7 +161,7 @@
       }
     },
     "training": {
-      "n_epochs": 200,
+      "n_epochs": 50,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }

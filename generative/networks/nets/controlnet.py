@@ -35,7 +35,7 @@ from collections.abc import Sequence
 
 import torch
 import torch.nn.functional as F
-from monai.networks.blocks import Convolution
+from monai.networks.blocks import Convolution, ResidualUnit
 from monai.utils import ensure_tuple_rep
 from torch import nn
 
@@ -52,14 +52,14 @@ class ControlNetConditioningEmbedding(nn.Module):
     ):
         super().__init__()
 
-        self.conv_in = Convolution(
+        self.conv_in = ResidualUnit(
             spatial_dims=spatial_dims,
             in_channels=in_channels,
             out_channels=num_channels[0],
             strides=1,
             kernel_size=3,
             padding=1,
-            conv_only=True,
+            # conv_only=True,
         )
 
         self.blocks = nn.ModuleList([])
@@ -68,38 +68,38 @@ class ControlNetConditioningEmbedding(nn.Module):
             channel_in = num_channels[i]
             channel_out = num_channels[i + 1]
             self.blocks.append(
-                Convolution(
+                ResidualUnit(
                     spatial_dims=spatial_dims,
                     in_channels=channel_in,
                     out_channels=channel_in,
                     strides=1,
                     kernel_size=3,
                     padding=1,
-                    conv_only=True,
+                    # conv_only=True,
                 )
             )
 
             self.blocks.append(
-                Convolution(
+                ResidualUnit(
                     spatial_dims=spatial_dims,
                     in_channels=channel_in,
                     out_channels=channel_out,
                     strides=2,
                     kernel_size=3,
                     padding=1,
-                    conv_only=True,
+                    # conv_only=True,
                 )
             )
 
         self.conv_out = zero_module(
-            Convolution(
+            ResidualUnit(
                 spatial_dims=spatial_dims,
                 in_channels=num_channels[-1],
                 out_channels=out_channels,
                 strides=1,
                 kernel_size=3,
                 padding=1,
-                conv_only=True,
+                # conv_only=True,
             )
         )
 
@@ -107,16 +107,11 @@ class ControlNetConditioningEmbedding(nn.Module):
         embedding = self.conv_in(conditioning)
         embedding = F.silu(embedding)
 
-        input_channel = conditioning[:, 0:1, :, :]
-        downsampled_input = F.interpolate(input_channel, size=(80, 80), mode='bilinear', align_corners=False)
-
         for block in self.blocks:
             embedding = block(embedding)
             embedding = F.silu(embedding)
 
         embedding = self.conv_out(embedding)
-        num_channels = embedding.shape[1]
-        embedding += downsampled_input.repeat(1, num_channels, 1, 1)
         return embedding
 
 
