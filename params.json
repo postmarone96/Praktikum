@@ -156,7 +156,7 @@
       }
     },
     "training": {
-      "n_epochs": 50,
+      "n_epochs": 200,
       "val_interval": 2,
       "num_epochs_checkpoints": 5
     }
