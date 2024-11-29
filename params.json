@@ -35,8 +35,8 @@
     },
 
     "cn": {
-      "cp": 0,
-      "id": 0,
+      "cp": 45,
+      "id": 29770223,
       "directory": "train_xs/"
     }
   },
@@ -111,11 +111,6 @@
       "schedule": "linear_beta",
       "beta_start": 0.0015,
       "beta_end": 0.0195
-    },
-    "loss":{
-      "alpha": 0.5,
-      "beta": 0.3,
-      "gamma": 0.2
     },
     "optimizer": {
       "lr": 1e-6,
