@@ -90,7 +90,7 @@ for p in unet.parameters():
     p.requires_grad = False
 
 # batch size
-if inference_method == 3:
+if inference_method == 3 or inference_method == 2:
     batch_size = 1
 else:
     batch_size = 30
@@ -138,24 +138,23 @@ slice_idx = 0
 # Process data through the model
 for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=len(train_loader))):
     with torch.no_grad(), autocast(enabled=True):
-        z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
+        # z = autoencoderkl.encode_stage_2_inputs(batch['image'].to(device))
         # Fall 1:
         if inference_method == 1:
             sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
         elif inference_method == 2:
-            noise_list = [initial_noise]
-            for _ in range(1, batch_size):
-                new_noise = torch.randn(noise_shape).to(device)
-                averaged_noise = (noise_list[-1] + new_noise) / 2
-                noise_list.append(averaged_noise)
-            initial_noise = noise_list[-1]
-            sample = torch.stack(noise_list)
-        elif inference_method == 3 and batch_idx != 0:
+            if batch_idx == 0:
+                sample = initial_noise.unsqueeze(0).repeat(batch_size, 1, 1, 1)
+            else:
+                new_noise = torch.randn(old_noise.shape).to(device)
+                sample = (old_noise + new_noise)/2
+            old_noise = sample
+        elif inference_method == 3:
             sample = intermediate_noise
-        elif inference_method == 3 and batch_idx == 0:
-            sample = intermediate_noise + z
-        cond = batch['cond'].to(device)
-        m = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
+        # elif inference_method == 3 and batch_idx == 0:
+        #     sample = intermediate_noise + z
+        m = batch['cond'].to(device)
+        # m = cond[:, 0:1, :, :] + cond[:, 1:2, :, :]
 
         # Assuming you have a scheduler for timesteps
         middle_step = len(scheduler.timesteps) // 2 
@@ -175,8 +174,6 @@ for batch_idx, batch in enumerate(tqdm(train_loader, desc="Processing", total=le
         output = autoencoderkl.decode(sample) / scale_factor
         output_numpy = output.squeeze(1).cpu().numpy()
         output_numpy = output_numpy[:, 10:-10, 10:-10]
-        # output_numpy = np.moveaxis(output_numpy, 0, -1)
-        # aggregated_output.append(output_numpy)
         start_slice_idx = slice_idx
         end_slice_idx = slice_idx + batch_size
         if end_slice_idx > total_slices:
