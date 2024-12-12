@@ -4,49 +4,49 @@ This file provides a detailed explanation of the parameters in the JSON configur
 
 ## **Configuration Parameters**
 
-### **`broken_ds`**
+#### **`broken_ds`**
 Indicates the status of the dataset after a training session.
 - **`0`**: Dataset is intact and not corrupted.
 - **`1`**: Dataset is corrupted, possibly because the HDF5 file was not closed correctly if training exceeded two days.
 
-### **`model`**
+#### **`model`**
 Specifies the type of model used in the training session.
 - **`vae`**: Variational Autoencoder.
 - **`ldm`**: Latent Diffusion Model.
 - **`cn`**: ControlNet.
 
-### **`project_dir`**
+#### **`project_dir`**
 Directory where the project files are located.
 
-### **`ids_file`**
+#### **`ids_file`**
 Path to the file containing voxel IDs necessary for non-annotated datasets.
 
 ## **Data Configuration**
 
-### **`dim`**
+#### **`dim`**
 Dimension of the image slices used in training and evaluation.
 - **`320`**: for 320x320 slices.
 
-### **`pad`**
+#### **`pad`**
 Padding applied to image slices to achieve the required dimensions.
 - **`10`**: necessary padding to convert 300x300 slices to 320x320.
 
-### **`gt_th`**
+#### **`gt_th`**
 Threshold value for determining ground truth.
 - **`0.5`**: threshold value.
 
-### **`size`**
+#### **`size`**
 Specifies the dataset size variant.
 - **`xs`**: Small annotated dataset.
 - **`xl`**: Large non-annotated dataset.
 
-### **`xs`**
+#### **`xs`**
 Paths to the small annotated datasets.
 - **`bg`**: Background image directory.
 - **`raw`**: Raw image directory.
 - **`gt`**: Ground truth image directory.
 
-### **`xl`**
+#### **`xl`**
 Paths to the large non-annotated datasets.
 - **`bg`**: Background image directory.
 - **`raw`**: Raw image directory.
@@ -55,7 +55,7 @@ Paths to the large non-annotated datasets.
 
 Configuration details for jobs depending on the model type:
 
-### **`Jobs VAE`**
+#### **`Jobs VAE`**
 - **`cp`**: Checkpoint parameter to specify the training epoch to start from or to use an existing checkpoint. 
   - **training VAE**: 
     - **`0`**: Start a fresh training.
@@ -71,7 +71,7 @@ Configuration details for jobs depending on the model type:
   - **`train_xl/train_#`**
 
 
-### **`Jobs LDM`**
+#### **`Jobs LDM`**
 - **`cp`**: Checkpoint parameter to specify the training epoch to start from or to use an existing checkpoint. 
   - **training VAE**: No effect.
   - **training LDM**: 
@@ -87,7 +87,7 @@ Configuration details for jobs depending on the model type:
   - **`train_xs`**
   - **`train_xl/train_#`**
 
-### **`Jobs CN`**
+#### **`Jobs CN`**
 - **`cp`**: Checkpoint parameter to specify the training epoch to start from or to use an existing checkpoint. 
   - **training VAE or LDM**: No effect.
   - **training CN**: 
