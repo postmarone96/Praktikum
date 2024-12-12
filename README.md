@@ -4,10 +4,7 @@ The goal of this project is to generate synthetic neuron images (`raw`) from **a
 
 ![Network Architecture](resources/network_readme.png)
 
-We achieve this using the following methods:  
-- **Variational Autoencoder (VAE)**  
-- **Latent Diffusion Model (LDM)**  
-- **ControlNet (CN)**  
+For this, we use a Variational Autoencoder (VAE), a Latent Diffusion Model (LDM) and a ControlNet (CN).  
 
 ## Methodology  
 
